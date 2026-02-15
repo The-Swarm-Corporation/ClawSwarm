@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package claw_swarm.gateway;
+
+// Platform identifier for unified message schema
+enum Platform {
+  PLATFORM_UNSPECIFIED = 0;
+  TELEGRAM = 1;
+  DISCORD = 2;
+  WHATSAPP = 3;
+}
+
+// Unified message schema: same structure for Telegram, Discord, WhatsApp
+message UnifiedMessage {
+  string id = 1;                    // Platform-specific message ID
+  Platform platform = 2;
+  string channel_id = 3;            // Chat / channel / server+channel
+  string thread_id = 4;             // Optional thread (e.g. Discord thread, Telegram topic)
+  string sender_id = 5;             // Platform user ID
+  string sender_handle = 6;         // Display name or @handle
+  string text = 7;                  // Plain text body
+  repeated string attachment_urls = 8;
+  int64 timestamp_utc_ms = 9;       // Unix ms UTC
+  bytes raw_metadata = 10;          // Optional platform-specific JSON
+}
+
+// Request to poll for new messages (optional filter by platform / since)
+message PollMessagesRequest {
+  repeated Platform platforms = 1;  // Empty = all configured platforms
+  int64 since_timestamp_utc_ms = 2; // Only messages after this (0 = no filter)
+  int32 max_messages = 3;           // Cap per platform (0 = default, e.g. 100)
+}
+
+message PollMessagesResponse {
+  repeated UnifiedMessage messages = 1;
+}
+
+// Server-streaming: gateway pushes new messages as they arrive
+message StreamMessagesRequest {
+  repeated Platform platforms = 1;
+}
+
+// Health check for load balancers / readiness
+message HealthRequest {}
+message HealthResponse {
+  bool ok = 1;
+  string version = 2;
+}
+
+service MessagingGateway {
+  rpc PollMessages(PollMessagesRequest) returns (PollMessagesResponse);
+  rpc StreamMessages(StreamMessagesRequest) returns (stream UnifiedMessage);
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
