@@ -1,6 +1,6 @@
 # ClawSwarm
 
-![Banner image](image/claw_swarm_new.png)
+![Banner image](images/claw_swarm_new.png)
 
 **Enterprise multi-channel AI agent platform.** One Swarms-based agent, one API—unified messaging across Telegram, Discord, and WhatsApp with optional Claude-powered reasoning. Built for production: gRPC gateway, prompts in code (`claw_swarm.prompts`), and 24/7 operation. Dockerfile included (Python 3.12).
 
