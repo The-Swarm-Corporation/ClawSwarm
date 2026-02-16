@@ -2,7 +2,7 @@
 ClawSwarm main entrypoint: run the agent 24/7.
 
 The agent polls the Messaging Gateway for Telegram, Discord, and WhatsApp messages,
-processes each with the ClawSwarm Swarms agent (prompts in claw_swarm/prompts/),
+processes each with the ClawSwarm Swarms agent (prompts in claw_swarm.prompts),
 and sends replies back. Run the gateway separately (python -m claw_swarm.gateway).
 
 Usage:

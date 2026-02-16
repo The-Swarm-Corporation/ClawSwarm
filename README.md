@@ -12,7 +12,7 @@ ClawSwarm delivers a single AI agent that responds to users on Telegram, Discord
 
 - **Unified ingestion** — One gRPC API for all supported channels; add or remove platforms without changing agent logic.
 - **Swarms-native agent** — Industry-standard orchestration, configurable model and system prompt, Claude available as a tool for deep reasoning and code.
-- **Prompts as configuration** — Agent and tool behavior live in Markdown files under `claw_swarm/prompts/` for version control and non-code changes.
+- **Prompts in code** — Agent and Claude-tool prompts are Python strings in `claw_swarm.prompts`; override via `create_agent(system_prompt=...)` or edit the module.
 - **Production-ready** — Optional TLS, environment-based configuration, long-running agent loop suitable for systemd, Docker, or managed runtimes.
 
 ---
@@ -68,19 +68,20 @@ Editable install: `pip install -e .`
 
 **1. Set environment variables** for the channels you use (e.g. `TELEGRAM_BOT_TOKEN`, `DISCORD_BOT_TOKEN`, `DISCORD_CHANNEL_IDS`).
 
-**2. Start the gateway** (message ingestion):
+**2. Run the full stack** (gateway + agent in one process group):
 
 ```bash
-python -m claw_swarm.gateway
+./run.sh
 ```
 
-**3. Start the agent** (processing and replies):
+Or run each component in a separate terminal:
 
 ```bash
-python -m claw_swarm.main
+python -m claw_swarm.gateway    # terminal 1
+python -m claw_swarm.main       # terminal 2
 ```
 
-Run both processes continuously (e.g. under systemd or Docker) for 24/7 operation.
+Use Ctrl+C to stop; `run.sh` stops both processes. For 24/7 operation, run under systemd or Docker.
 
 ---
 
@@ -112,7 +113,7 @@ Replies use the same platform tokens as the gateway.
 
 ## Agent and Prompts
 
-The main agent is a **Swarms Agent** with system prompt from `claw_swarm/prompts/clawswarm.md` and a single tool, **call_claude**, backed by `claw_swarm/prompts/claude_tool.md`. Edit these files to change behavior without code changes.
+The main agent is a **Swarms Agent** with system prompt and Claude-tool prompt defined in `claw_swarm.prompts`. Override with `create_agent(system_prompt=...)` or edit the strings in that module.
 
 **Programmatic use:**
 

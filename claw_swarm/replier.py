@@ -7,7 +7,6 @@ The agent calls this after processing a message so the user gets a response.
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 from claw_swarm.gateway.schema import Platform
 
@@ -41,12 +40,15 @@ def send_message(
 ) -> tuple[bool, str]:
     """Synchronous wrapper; runs the async send in an event loop."""
     import asyncio
+
     return asyncio.get_event_loop().run_until_complete(
         send_message_async(platform, channel_id, thread_id, text)
     )
 
 
-async def _send_telegram(channel_id: str, thread_id: str, text: str) -> tuple[bool, str]:
+async def _send_telegram(
+    channel_id: str, thread_id: str, text: str
+) -> tuple[bool, str]:
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not token or not channel_id:
         return False, "TELEGRAM_BOT_TOKEN or channel_id missing"
@@ -57,7 +59,9 @@ async def _send_telegram(channel_id: str, thread_id: str, text: str) -> tuple[bo
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload: dict = {"chat_id": channel_id, "text": text}
     if thread_id:
-        payload["message_thread_id"] = int(thread_id) if thread_id.isdigit() else thread_id
+        payload["message_thread_id"] = (
+            int(thread_id) if thread_id.isdigit() else thread_id
+        )
     async with aiohttp.ClientSession() as session:
         async with session.post(url, json=payload) as resp:
             if resp.status != 200:
@@ -79,7 +83,10 @@ async def _send_discord(channel_id: str, thread_id: str, text: str) -> tuple[boo
     headers = {"Authorization": f"Bot {token}", "Content-Type": "application/json"}
     payload: dict = {"content": text[:2000]}  # Discord limit 2000
     if thread_id:
-        payload["message_reference"] = {"channel_id": channel_id, "message_id": thread_id}
+        payload["message_reference"] = {
+            "channel_id": channel_id,
+            "message_id": thread_id,
+        }
     async with aiohttp.ClientSession() as session:
         async with session.post(url, headers=headers, json=payload) as resp:
             if resp.status not in (200, 201):
@@ -88,7 +95,9 @@ async def _send_discord(channel_id: str, thread_id: str, text: str) -> tuple[boo
             return True, ""
 
 
-async def _send_whatsapp(channel_id: str, thread_id: str, text: str) -> tuple[bool, str]:
+async def _send_whatsapp(
+    channel_id: str, thread_id: str, text: str
+) -> tuple[bool, str]:
     token = os.environ.get("WHATSAPP_ACCESS_TOKEN")
     phone_number_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
     if not token or not phone_number_id:

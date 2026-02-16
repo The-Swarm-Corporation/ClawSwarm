@@ -2,7 +2,7 @@
 Main agent loop: connect to the Messaging Gateway, poll for new messages,
 run the ClawSwarm Swarms agent on each message, and send replies back via the replier.
 
-The agent uses the ClawSwarm system prompt (see prompts/clawswarm.md) and Claude as a tool.
+The agent uses the ClawSwarm system prompt (claw_swarm.prompts) and Claude as a tool.
 Runs 24/7 until interrupted (SIGINT/SIGTERM). Configure via environment variables.
 """
 
@@ -104,7 +104,10 @@ async def run_agent_loop(
                     await _process_message(msg, agent=agent, on_reply=on_reply)
             except grpc.RpcError as e:
                 if e.code() == grpc.StatusCode.UNAVAILABLE:
-                    print(f"[agent] Gateway unavailable at {target}, retrying in {poll_interval_seconds}s...", file=sys.stderr)
+                    print(
+                        f"[agent] Gateway unavailable at {target}, retrying in {poll_interval_seconds}s...",
+                        file=sys.stderr,
+                    )
                 else:
                     print(f"[agent] gRPC error: {e}", file=sys.stderr)
             except asyncio.CancelledError:
@@ -130,7 +133,10 @@ def main() -> int:
             # Windows
             break
 
-    print("ClawSwarm agent started. Polling gateway for messages (Ctrl+C to stop).", file=sys.stderr)
+    print(
+        "ClawSwarm agent started. Polling gateway for messages (Ctrl+C to stop).",
+        file=sys.stderr,
+    )
     try:
         loop.run_until_complete(task)
     except asyncio.CancelledError:
