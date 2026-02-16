@@ -46,7 +46,9 @@ class MessagingGatewayServicer(pb_grpc.MessagingGatewayServicer):
         self._version = version
 
     def _adapters_for_request(self, platforms: Sequence[int]) -> list[MessageAdapter]:
-        if not platforms or (len(platforms) == 1 and platforms[0] == pb.PLATFORM_UNSPECIFIED):
+        if not platforms or (
+            len(platforms) == 1 and platforms[0] == pb.PLATFORM_UNSPECIFIED
+        ):
             return list(self._adapters_by_platform.values())
         out = []
         for p in platforms:
@@ -55,7 +57,9 @@ class MessagingGatewayServicer(pb_grpc.MessagingGatewayServicer):
                 out.append(self._adapters_by_platform[plat])
         return out
 
-    async def PollMessages(self, request: pb.PollMessagesRequest, context: grpc.aio.ServicerContext) -> pb.PollMessagesResponse:
+    async def PollMessages(
+        self, request: pb.PollMessagesRequest, context: grpc.aio.ServicerContext
+    ) -> pb.PollMessagesResponse:
         adapters = self._adapters_for_request(list(request.platforms))
         since_ms = request.since_timestamp_utc_ms or 0
         max_messages = request.max_messages or 100
@@ -76,7 +80,9 @@ class MessagingGatewayServicer(pb_grpc.MessagingGatewayServicer):
         all_messages.sort(key=lambda m: m.timestamp_utc_ms)
         return pb.PollMessagesResponse(messages=all_messages[:max_messages])
 
-    async def StreamMessages(self, request: pb.StreamMessagesRequest, context: grpc.aio.ServicerContext):
+    async def StreamMessages(
+        self, request: pb.StreamMessagesRequest, context: grpc.aio.ServicerContext
+    ):
         adapters = self._adapters_for_request(list(request.platforms))
         if not adapters:
             return
@@ -85,7 +91,9 @@ class MessagingGatewayServicer(pb_grpc.MessagingGatewayServicer):
         since_ms = 0
         try:
             while context.is_active():
-                batch = await adapter.fetch_messages(since_timestamp_utc_ms=since_ms, max_messages=50)
+                batch = await adapter.fetch_messages(
+                    since_timestamp_utc_ms=since_ms, max_messages=50
+                )
                 for m in batch:
                     yield m.to_grpc()
                     if m.timestamp_utc_ms > since_ms:
@@ -94,7 +102,9 @@ class MessagingGatewayServicer(pb_grpc.MessagingGatewayServicer):
         except asyncio.CancelledError:
             pass
 
-    async def Health(self, request: pb.HealthRequest, context: grpc.aio.ServicerContext) -> pb.HealthResponse:
+    async def Health(
+        self, request: pb.HealthRequest, context: grpc.aio.ServicerContext
+    ) -> pb.HealthResponse:
         return pb.HealthResponse(ok=True, version=self._version)
 
 

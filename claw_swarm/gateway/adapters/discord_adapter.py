@@ -44,7 +44,10 @@ class DiscordAdapter(MessageAdapter):
         out: list[UnifiedMessage] = []
         per_channel = max(1, max_messages // len(self._channel_ids))
         base = "https://discord.com/api/v10"
-        headers = {"Authorization": f"Bot {self._token}", "Content-Type": "application/json"}
+        headers = {
+            "Authorization": f"Bot {self._token}",
+            "Content-Type": "application/json",
+        }
         async with aiohttp.ClientSession() as session:
             for channel_id in self._channel_ids[:20]:
                 url = f"{base}/channels/{channel_id}/messages?limit={per_channel}"
@@ -62,15 +65,24 @@ class DiscordAdapter(MessageAdapter):
                     if since_timestamp_utc_ms and ts <= since_timestamp_utc_ms:
                         continue
                     author = msg.get("author", {})
-                    attachments = [a.get("url", "") for a in msg.get("attachments", []) if a.get("url")]
+                    attachments = [
+                        a.get("url", "")
+                        for a in msg.get("attachments", [])
+                        if a.get("url")
+                    ]
                     out.append(
                         UnifiedMessage(
                             id=msg["id"],
                             platform=Platform.DISCORD,
                             channel_id=str(msg.get("channel_id", "")),
-                            thread_id=str(msg.get("thread", {}).get("id", "")) if isinstance(msg.get("thread"), dict) else "",
+                            thread_id=(
+                                str(msg.get("thread", {}).get("id", ""))
+                                if isinstance(msg.get("thread"), dict)
+                                else ""
+                            ),
                             sender_id=author.get("id", ""),
-                            sender_handle=author.get("username", "") or author.get("global_name", ""),
+                            sender_handle=author.get("username", "")
+                            or author.get("global_name", ""),
                             text=msg.get("content", ""),
                             attachment_urls=attachments,
                             timestamp_utc_ms=ts,
@@ -88,7 +100,7 @@ def _channel_ids_from_env() -> list[str]:
 
 def _discord_snowflake_to_ms(snowflake: str) -> int:
     try:
-        return ((int(snowflake) >> 22) + 1420070400000)
+        return (int(snowflake) >> 22) + 1420070400000
     except (ValueError, TypeError):
         return 0
 

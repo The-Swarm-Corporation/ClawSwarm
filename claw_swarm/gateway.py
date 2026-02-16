@@ -52,7 +52,10 @@ def main() -> None:
             with open(key_file, "rb") as f:
                 key = f.read()
             import grpc
-            server_credentials = grpc.ssl_server_credentials(((key, cert),))  # (private_key, cert_chain)
+
+            server_credentials = grpc.ssl_server_credentials(
+                ((key, cert),)
+            )  # (private_key, cert_chain)
 
     async def serve() -> None:
         srv = await run_server(
@@ -62,7 +65,9 @@ def main() -> None:
             use_tls=use_tls,
             server_credentials=server_credentials,
         )
-        print(f"Messaging Gateway gRPC server listening on {host}:{port} (TLS={use_tls})")
+        print(
+            f"Messaging Gateway gRPC server listening on {host}:{port} (TLS={use_tls})"
+        )
         await srv.wait_for_termination()
 
     asyncio.run(serve())

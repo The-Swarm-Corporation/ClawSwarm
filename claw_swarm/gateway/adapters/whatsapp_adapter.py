@@ -24,7 +24,9 @@ class WhatsAppAdapter(MessageAdapter):
         phone_number_id: str | None = None,
     ) -> None:
         self._token = access_token or os.environ.get("WHATSAPP_ACCESS_TOKEN")
-        self._phone_number_id = phone_number_id or os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+        self._phone_number_id = phone_number_id or os.environ.get(
+            "WHATSAPP_PHONE_NUMBER_ID"
+        )
 
     @property
     def platform_name(self) -> str:
@@ -44,7 +46,9 @@ class WhatsAppAdapter(MessageAdapter):
         # Optional: read from a shared queue populated by your webhook handler
         queue_key = os.environ.get("WHATSAPP_QUEUE_PATH")
         if queue_key:
-            return await _drain_queue(queue_key, since_timestamp_utc_ms, max_messages, Platform.WHATSAPP)
+            return await _drain_queue(
+                queue_key, since_timestamp_utc_ms, max_messages, Platform.WHATSAPP
+            )
         return []
 
 

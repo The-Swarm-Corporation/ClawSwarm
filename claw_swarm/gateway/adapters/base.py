@@ -50,4 +50,5 @@ class MessageAdapter(ABC):
                     since_ms = msg.timestamp_utc_ms
             if not batch:
                 import asyncio
+
                 await asyncio.sleep(5)

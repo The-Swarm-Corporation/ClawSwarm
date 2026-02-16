@@ -47,8 +47,22 @@ message HealthResponse {
   string version = 2;
 }
 
+// Send a reply back to a channel (used by the agent after processing a message)
+message SendMessageRequest {
+  Platform platform = 1;
+  string channel_id = 2;   // Chat / channel to send to
+  string thread_id = 3;     // Optional thread (e.g. Discord thread, Telegram topic)
+  string text = 4;          // Message body to send
+}
+
+message SendMessageResponse {
+  bool success = 1;
+  string error_message = 2;  // Set when success is false
+}
+
 service MessagingGateway {
   rpc PollMessages(PollMessagesRequest) returns (PollMessagesResponse);
   rpc StreamMessages(StreamMessagesRequest) returns (stream UnifiedMessage);
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
   rpc Health(HealthRequest) returns (HealthResponse);
 }

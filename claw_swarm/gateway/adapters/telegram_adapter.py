@@ -6,7 +6,6 @@ Configure with TELEGRAM_BOT_TOKEN env var; without it, fetch_messages returns []
 from __future__ import annotations
 
 import os
-import time
 from typing import TYPE_CHECKING
 
 from claw_swarm.gateway.adapters.base import MessageAdapter
@@ -63,7 +62,11 @@ class TelegramAdapter(MessageAdapter):
             for key in ("photo", "document", "audio", "voice", "video"):
                 if key in msg:
                     # Telegram returns file_id; optional: resolve to URL via getFile
-                    attachments.append(msg[key][-1].get("file_id", "") if isinstance(msg[key], list) else str(msg[key]))
+                    attachments.append(
+                        msg[key][-1].get("file_id", "")
+                        if isinstance(msg[key], list)
+                        else str(msg[key])
+                    )
             out.append(
                 UnifiedMessage(
                     id=str(msg["message_id"]),
@@ -71,7 +74,8 @@ class TelegramAdapter(MessageAdapter):
                     channel_id=str(chat.get("id", "")),
                     thread_id=str(chat.get("message_thread_id", "")),
                     sender_id=str(from_.get("id", "")),
-                    sender_handle=from_.get("username", "") or from_.get("first_name", ""),
+                    sender_handle=from_.get("username", "")
+                    or from_.get("first_name", ""),
                     text=text,
                     attachment_urls=attachments,
                     timestamp_utc_ms=ts,
