@@ -6,13 +6,13 @@
   <a href="https://pypi.org/project/claw-swarm/" target="_blank">
     <picture>
       <source srcset="https://img.shields.io/pypi/v/swarms?style=for-the-badge&color=3670A0" media="(prefers-color-scheme: dark)">
-      <img alt="Version" src="https://img.shields.io/pypi/v/swarms?style=for-the-badge&color=3670A0">
+      <img alt="Version" src="https://img.shields.io/pypi/v/claw-swarm?style=for-the-badge&color=3670A0">
     </picture>
   </a>
   <a href="https://pypi.org/project/claw-swarm/" target="_blank">
     <picture>
       <source srcset="https://img.shields.io/pypi/dm/swarms?style=for-the-badge&color=3670A0" media="(prefers-color-scheme: dark)">
-      <img alt="Downloads" src="https://img.shields.io/pypi/dm/swarms?style=for-the-badge&color=3670A0">
+      <img alt="Downloads" src="https://img.shields.io/pypi/dm/claw-swarm?style=for-the-badge&color=3670A0">
     </picture>
   </a>
   <a href="https://twitter.com/swarms_corp/">
