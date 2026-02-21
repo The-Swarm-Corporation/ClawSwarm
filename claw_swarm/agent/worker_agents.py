@@ -1,9 +1,11 @@
 """
-Specialized sub-agents for ClawSwarm: search, token launch, and developer.
+Specialized sub-agents for ClawSwarm: response, search, token launch, and developer.
 
 This module provides worker agents that can be invoked by the main ClawSwarm agent
 or used standalone for focused tasks:
 
+- **Response agent**: Simple replies and general questions (greetings, short factual
+  answers, clarifications). No tools; LLM only.
 - **Search agent**: Web/semantic search via exa_search. Use for current events,
   research, fact-checking, and finding recent information.
 - **Token launch agent**: Launch tokens and claim fees on Swarms World. Use for
@@ -141,6 +143,36 @@ You are a developer specialist agent. Your role is to handle all coding, refacto
 - If the user only wants an explanation or design and no code changes, your task to run_claude_developer should say so explicitly (e.g. "Explain how X works; do not modify any files").
 """
 
+# ---- Response (simple / general) ----
+RESPONSE_AGENT_NAME = "ClawSwarm-Response"
+RESPONSE_AGENT_DESCRIPTION = (
+    "Specialized sub-agent for simple replies and general questions. Handles "
+    "greetings, short factual answers, clarifications, and conversational turn-taking "
+    "without using search, code, or token tools."
+)
+RESPONSE_SYSTEM_PROMPT = """
+You are a response specialist for ClawSwarm. Your role is to handle simple, direct interactions and general questions that do not require web search, code execution, or token/blockchain operations.
+
+**When to respond:**
+- Greetings (hello, hi, thanks, bye) and small talk
+- Short factual or conceptual questions you can answer from general knowledge
+- Clarifications (e.g. "what do you mean?", "can you repeat that?")
+- Polite acknowledgments, confirmations, or brief follow-ups
+- General explanations when no tools are needed
+
+**How to respond:**
+- Be concise and friendly. Match the tone of the user (casual or professional).
+- Answer in plain language. No emojis unless the user uses them.
+- If the question is ambiguous, ask one short clarifying question.
+- If the request clearly needs search (current events, recent info), code, or token operations, say briefly that a specialist agent would handle it and you are providing a general answer only, or state what would be needed.
+
+**Scope:**
+- Do not make up facts. If unsure, say so or suggest the user try search for up-to-date info.
+- Do not write or run code; defer to the developer agent for that.
+- Do not launch tokens or claim fees; defer to the token launch agent.
+- Keep responses chat-length. No long essays unless the user asked for detail.
+"""
+
 
 # =============================================================================
 # Helpers and agent factories
@@ -163,6 +195,47 @@ def _run_claude_developer(tasks: str) -> str:
         "\n\n".join(r for r in responses if r).strip()
         if responses
         else ""
+    )
+
+
+# ---- Response worker ----
+
+
+def create_response_agent(
+    *,
+    agent_name: str = RESPONSE_AGENT_NAME,
+    system_prompt: str | None = None,
+    model_name: str | None = None,
+) -> Agent:
+    """
+    Create a response sub-agent for simple replies and general questions (no tools).
+
+    Args:
+        agent_name: Name for the agent instance.
+        system_prompt: Override the default response specialist prompt.
+        model_name: Model to use; defaults to env AGENT_MODEL or "gpt-4o-mini".
+
+    Returns:
+        Agent with no tools, for greetings and general Q&A.
+    """
+    prompt = system_prompt or RESPONSE_SYSTEM_PROMPT
+    full_system = build_agent_system_prompt(
+        name=agent_name,
+        description=RESPONSE_AGENT_DESCRIPTION,
+        system_prompt=prompt,
+    )
+    model = (
+        model_name
+        or os.environ.get("AGENT_MODEL", "gpt-4o-mini").strip()
+        or "gpt-4o-mini"
+    )
+    return Agent(
+        agent_name=agent_name,
+        agent_description=RESPONSE_AGENT_DESCRIPTION,
+        system_prompt=full_system,
+        model_name=model,
+        max_loops=1,
+        output_type="final",
     )
 
 

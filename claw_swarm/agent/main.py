@@ -21,11 +21,13 @@ from claw_swarm.prompts import (
 from claw_swarm.tools import run_claude_agent
 from claw_swarm.agent.worker_agents import (
     create_developer_agent,
+    create_response_agent,
     create_search_agent,
     create_token_launch_agent,
 )
 
 WORKER_AGENTS = [
+    create_response_agent(),
     create_developer_agent(),
     create_search_agent(),
     create_token_launch_agent(),
@@ -126,8 +128,9 @@ def create_agent(
         description="A hierarchical swarm of agents that can handle complex tasks",
         agents=WORKER_AGENTS,
         director_name=agent_name,
-        director_model_name="gpt-4.1",
+        director_model_name=director_model_name,
         director_system_prompt=director_system_prompt,
+        director_feedback_on=False,
     )
 
 

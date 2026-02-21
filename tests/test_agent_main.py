@@ -120,7 +120,7 @@ class TestCreateAgent:
             agent_main.create_agent()
         call_kw = mock_swarm.call_args[1]
         assert call_kw["agents"] is agent_main.WORKER_AGENTS
-        assert len(call_kw["agents"]) == 3
+        assert len(call_kw["agents"]) == 4
         assert call_kw["director"] is None
 
     def test_model_from_env(self):

@@ -89,54 +89,31 @@ The main agent is a **HierarchicalSwarm**: a director assigns tasks to specialis
 
 ```mermaid
 flowchart TB
-    subgraph channels["Channels"]
-        TG[Telegram]
-        DC[Discord]
-        WA[WhatsApp]
-    end
-
-    subgraph pipeline["ClawSwarm pipeline"]
-        GW[Gateway]
-        HS[Hierarchical Swarm]
-        SUM[Telegram Summarizer]
-        RPL[Replier]
-    end
-
-    TG --> GW
-    DC --> GW
-    WA --> GW
-    GW --> HS
-    HS --> SUM
-    SUM --> RPL
-    RPL --> TG
-    RPL --> DC
-    RPL --> WA
-```
-
-```mermaid
-flowchart TB
     subgraph swarm["Hierarchical Swarm"]
         DIR[Director\nClawSwarm]
+        DIR --> W0[ClawSwarm-Response]
         DIR --> W1[ClawSwarm-Search]
         DIR --> W2[ClawSwarm-TokenLaunch]
         DIR --> W3[ClawSwarm-Developer]
     end
 
     USER[User message] --> DIR
-    W1 --> OUT[Swarm output]
+    W0 --> OUT[Swarm output]
+    W1 --> OUT
     W2 --> OUT
     W3 --> OUT
     OUT --> SUM[Telegram Summarizer]
     SUM --> REPLY[Reply to user]
 ```
 
-**Director:** Receives the user message, creates a plan, and issues orders (SwarmSpec) to one or more workers. **Workers** execute their tasks (search, token launch, or code). The **Telegram Summarizer** turns the combined output into a concise, emoji-free reply for the channel.
+**Director:** Receives the user message, creates a plan, and issues orders (SwarmSpec) to one or more workers. **Workers** execute their tasks (simple response, search, token launch, or code). The **Telegram Summarizer** turns the combined output into a concise, emoji-free reply for the channel.
 
 ### Agents
 
 | Agent | Role | Tools / capabilities |
 |-------|------|----------------------|
 | **ClawSwarm** (Director) | Orchestrator; creates a plan and assigns tasks to workers via SwarmSpec. | Plan + orders (structured output for the swarm). |
+| **ClawSwarm-Response** | Simple replies and general questions; greetings, short factual answers, clarifications. | None (LLM only). |
 | **ClawSwarm-Search** | Web and semantic search. | `exa_search` — current events, research, fact-checking. |
 | **ClawSwarm-TokenLaunch** | Launch tokens and claim fees on Swarms World (Solana). | `launch_token`, `claim_fees`. |
 | **ClawSwarm-Developer** | Code, refactor, debug, and implement via Claude Code. | `run_claude_developer` (Read, Write, Edit, Bash, Grep, Glob, etc.). |
