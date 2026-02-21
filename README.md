@@ -58,66 +58,41 @@ ClawSwarm is a streamlined, multi-agent alternative to OpenClaw. It delivers **n
 
 ## Architecture
 
-### Message flow
-
-```
-     Telegram    Discord    WhatsApp
-          \        |        /
-           \       v       /
-            +--------------+
-            |   Gateway    |   unified ingest (gRPC)
-            +------+-------+
-                   |
-                   v
-            +--------------+
-            |    Agent     |   Hierarchical Swarm + Summarizer
-            +------+-------+
-                   |
-                   v
-            +--------------+
-            |   Replier    |   send back to each channel
-            +------+-------+
-                   |
-     Telegram    Discord    WhatsApp
-```
-
-**Flow:** User messages arrive on any channel → Gateway normalizes and exposes via gRPC → Hierarchical Swarm (director + workers) runs → Telegram Summarizer shortens output for chat (no emojis) → Replier sends the response to the correct channel.
-
-### Hierarchical swarm (Mermaid)
-
-The main agent is a **HierarchicalSwarm**: a director assigns tasks to specialist workers, then a summarizer prepares the final reply for chat.
+Messages flow: **Channels** → **Gateway** (gRPC) → **Hierarchical Swarm** (director + workers) → **Summarizer** (chat-friendly, no emojis) → **Replier** → channels.
 
 ```mermaid
-flowchart TB
-    subgraph swarm["Hierarchical Swarm"]
-        DIR[Director\nClawSwarm]
-        DIR --> W0[ClawSwarm-Response]
-        DIR --> W1[ClawSwarm-Search]
-        DIR --> W2[ClawSwarm-TokenLaunch]
-        DIR --> W3[ClawSwarm-Developer]
+flowchart LR
+    subgraph ch["Channels"]
+        TG[Telegram]
+        DC[Discord]
+        WA[WhatsApp]
     end
-
-    USER[User message] --> DIR
-    W0 --> OUT[Swarm output]
-    W1 --> OUT
-    W2 --> OUT
-    W3 --> OUT
-    OUT --> SUM[Telegram Summarizer]
-    SUM --> REPLY[Reply to user]
+    GW[Gateway]
+    subgraph swarm["Swarm"]
+        DIR[Director]
+        DIR --> R[Response]
+        DIR --> S[Search]
+        DIR --> T[TokenLaunch]
+        DIR --> D[Developer]
+    end
+    SUM[Summarizer]
+    RPL[Replier]
+    ch --> GW --> DIR
+    R --> SUM
+    S --> SUM
+    T --> SUM
+    D --> SUM
+    SUM --> RPL
 ```
 
-**Director:** Receives the user message, creates a plan, and issues orders (SwarmSpec) to one or more workers. **Workers** execute their tasks (simple response, search, token launch, or code). The **Telegram Summarizer** turns the combined output into a concise, emoji-free reply for the channel.
-
-### Agents
-
-| Agent | Role | Tools / capabilities |
-|-------|------|----------------------|
-| **ClawSwarm** (Director) | Orchestrator; creates a plan and assigns tasks to workers via SwarmSpec. | Plan + orders (structured output for the swarm). |
-| **ClawSwarm-Response** | Simple replies and general questions; greetings, short factual answers, clarifications. | None (LLM only). |
-| **ClawSwarm-Search** | Web and semantic search. | `exa_search` — current events, research, fact-checking. |
-| **ClawSwarm-TokenLaunch** | Launch tokens and claim fees on Swarms World (Solana). | `launch_token`, `claim_fees`. |
-| **ClawSwarm-Developer** | Code, refactor, debug, and implement via Claude Code. | `run_claude_developer` (Read, Write, Edit, Bash, Grep, Glob, etc.). |
-| **ClawSwarm-TelegramSummarizer** | Summarize swarm output for chat; plain text, no emojis. | None (LLM only). |
+| Agent | Role | Tools |
+|-------|------|-------|
+| **ClawSwarm** (Director) | Plan and assign tasks via SwarmSpec. | — |
+| **ClawSwarm-Response** | Simple replies, greetings, general Q&A. | None |
+| **ClawSwarm-Search** | Web/semantic search. | `exa_search` |
+| **ClawSwarm-TokenLaunch** | Launch tokens, claim fees (Swarms World). | `launch_token`, `claim_fees` |
+| **ClawSwarm-Developer** | Code, refactor, debug via Claude Code. | `run_claude_developer` |
+| **ClawSwarm-TelegramSummarizer** | Shorten output for chat; no emojis. | None |
 
 ### Relationship to OpenClaw
 
