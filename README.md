@@ -91,7 +91,7 @@ The core of ClawSwarm is a **hierarchical multi-agent system** built on Swarmsâ€
 
 This design keeps the director focused on orchestration and intent, while search, code, token operations, and simple replies are handled by the right worker. You get multi-agent behavior with a clear chain of responsibility and a single, chat-friendly response to the user.
 
-### Hierarchical swarm (Mermaid)
+### Hierarchical swarm
 
 ```mermaid
 flowchart TB
