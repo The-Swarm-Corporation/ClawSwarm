@@ -52,6 +52,7 @@ pydantic = "*"
 aiohttp = "*"
 swarms = "*"
 loguru = "*"
+duckduckgo-search = "*"
 
 [tool.poetry.scripts]
 clawswarm = "claw_swarm.cli:main"

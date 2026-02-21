@@ -7,3 +7,4 @@ pydantic
 aiohttp
 swarms
 loguru
+duckduckgo-search

@@ -44,7 +44,7 @@ from claw_swarm.prompts import (
     build_agent_system_prompt,
 )
 from claw_swarm.tools import run_claude_agent
-from claw_swarm.tools.launch_tokens import claim_fees, launch_token
+from claw_swarm.tools.tools_registry import tools as registered_tools
 
 
 def call_claude(task: str) -> str:
@@ -126,5 +126,5 @@ def create_agent(
         model_name=model_name,
         max_loops=1,
         output_type="final",
-        tools=[launch_token, claim_fees],
+        tools=registered_tools,
     )
