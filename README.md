@@ -129,6 +129,25 @@ flowchart TB
 
 Worker agents are created in `claw_swarm.agent.worker_agents` (e.g. `create_response_agent()`, `create_search_agent()`, `create_developer_agent()`, `create_token_launch_agent()`) and composed into the swarm in `claw_swarm.agent.main` via `create_agent()`, which returns a `HierarchicalSwarm` ready for `.run(task)`.
 
+### Memory
+
+Conversation history is persisted in a markdown file (default `agent_memory.md` at project root, configurable via `AGENT_MEMORY_FILE`). After each reply, the interaction is appended to the file with timestamp, platform, channel, and user/agent text. When handling a new message, the agent reads this file and injects it into the prompt as prior context so it can refer to past conversations across Telegram, Discord, WhatsApp, and restarts. If the file grows beyond the context window (bounded by `AGENT_MEMORY_MAX_CHARS`), the memory is embedded and RAG is used to retrieve only the most relevant chunks for the current query, so long-term memory is preserved without overflowing the context.
+
+```mermaid
+flowchart LR
+    subgraph write["Persist"]
+        A[Interaction] --> B[Append to file]
+    end
+    subgraph read["On new message"]
+        C[Read memory file] --> D{Within context limit?}
+        D -->|Yes| E[Inject full memory]
+        D -->|No| F[Embed memory]
+        F --> G[RAG retrieve]
+        G --> E
+        E --> H[Agent context]
+    end
+```
+
 ### Relationship to OpenClaw
 
 [OpenClaw](https://github.com/openclaw/openclaw) is a full-featured personal AI assistant (gateway, many channels, voice, canvas, nodes, skills). **ClawSwarm** is a smaller, lighter-weight take on that vision: natively multi-agent, built on the Swarms framework and Swarms ecosystem, with a path to compile to Rust. Use ClawSwarm when you want a lean, multi-agent messaging layer; use OpenClaw when you need the full product (companion apps, voice, canvas, etc.).
