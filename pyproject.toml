@@ -53,6 +53,8 @@ aiohttp = "*"
 swarms = "*"
 loguru = "*"
 rich = "*"
+fastapi = "*"
+uvicorn = {extras = ["standard"], version = "*"}
 
 [tool.poetry.scripts]
 clawswarm = "claw_swarm.cli:main"

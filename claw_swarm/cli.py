@@ -3,7 +3,9 @@ Simple CLI for ClawSwarm: run (gateway + agent) and settings.
 
 Usage:
   clawswarm --help
-  clawswarm run
+  clawswarm run                    # gateway + agent only
+  clawswarm run --api              # gateway + agent + public HTTP API
+  clawswarm run --api --port 9000  # custom HTTP API port
   clawswarm settings
 """
 
@@ -54,55 +56,107 @@ def _ensure_dotenv() -> None:
         load_dotenv()
 
 
-def cmd_run(_args: argparse.Namespace) -> int:
-    """
-    Run the gateway and agent together.
+def _terminate(proc: subprocess.Popen, name: str) -> None:
+    """Gracefully terminate a subprocess; SIGKILL after 5 s."""
+    if proc.poll() is not None:
+        return
+    proc.terminate()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        print(
+            f"clawswarm: {name} did not stop; killing.",
+            file=sys.stderr,
+        )
+        proc.kill()
 
-    Starts the Messaging Gateway gRPC server in a subprocess, then runs the
-    ClawSwarm agent in this process. The agent connects to the local gateway.
-    On exit (e.g. Ctrl+C), the gateway subprocess is terminated.
+
+def cmd_run(args: argparse.Namespace) -> int:
+    """
+    Run the ClawSwarm stack: gateway, agent, and optionally the HTTP API.
+
+    Always starts:
+      1. Messaging Gateway  – gRPC server (subprocess)
+      2. Agent loop         – polls gateway, runs swarm, sends replies (this process)
+
+    With --api also starts:
+      3. HTTP API Server    – FastAPI/uvicorn on 0.0.0.0:API_PORT (subprocess)
+         On startup it prints your machine's public IP so you have the exact
+         URL to share: http://<public-ip>:<port>/docs
+
+    Relevant env vars
+    -----------------
+    GATEWAY_HOST   gRPC bind host (default: [::])
+    GATEWAY_PORT   gRPC port      (default: 50051)
+    API_PORT       HTTP API port  (default: 8080)  [only used with --api]
+    API_KEY        If set, /v1/* requests must send X-API-Key: <value>
 
     Returns:
-        Exit code: 0 on normal agent exit, non-zero if the gateway fails
-        to start or the agent errors.
+        0 on normal exit, non-zero if a subprocess fails to start.
     """
     _ensure_dotenv()
-    host = os.environ.get("GATEWAY_HOST", "[::]")
-    port = int(os.environ.get("GATEWAY_PORT", "50051"))
+
+    gw_host = os.environ.get("GATEWAY_HOST", "[::]")
+    gw_port = int(os.environ.get("GATEWAY_PORT", "50051"))
+    api_port = int(os.environ.get("API_PORT", str(args.port)))
+
     env = os.environ.copy()
-    env["GATEWAY_HOST"] = host
-    env["GATEWAY_PORT"] = str(port)
-    # Start gateway as subprocess
-    proc = subprocess.Popen(
+    env["GATEWAY_HOST"] = gw_host
+    env["GATEWAY_PORT"] = str(gw_port)
+    env["API_PORT"] = str(api_port)
+
+    # ── 1. Start Messaging Gateway ──────────────────────────────────────
+    gw_proc = subprocess.Popen(
         [sys.executable, "-m", "claw_swarm.gateway"],
         env=env,
         stdout=sys.stdout,
         stderr=sys.stderr,
     )
-    # Give gateway time to bind
-    time.sleep(1.5)
-    if proc.poll() is not None:
+
+    # ── 2. (Optional) Start HTTP API Server ─────────────────────────────
+    api_proc: subprocess.Popen | None = None
+    if args.api:
+        api_proc = subprocess.Popen(
+            [sys.executable, "-m", "claw_swarm.api"],
+            env=env,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        )
+
+    # Give servers a moment to bind before the agent connects
+    time.sleep(2.0)
+
+    if gw_proc.poll() is not None:
         print("clawswarm: gateway exited early.", file=sys.stderr)
-        return proc.returncode or 1
+        if api_proc is not None:
+            _terminate(api_proc, "api-server")
+        return gw_proc.returncode or 1
 
-    def kill_gateway() -> None:
-        """Terminate the gateway subprocess; kill it if it does not exit in 5s."""
-        proc.terminate()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
+    if api_proc is not None and api_proc.poll() is not None:
+        print(
+            "clawswarm: API server exited early. "
+            "Is fastapi/uvicorn installed? "
+            "Run: pip install fastapi 'uvicorn[standard]'",
+            file=sys.stderr,
+        )
+        _terminate(gw_proc, "gateway")
+        return api_proc.returncode or 1
 
-    # Agent in this process must connect to local gateway
+    def _kill_all() -> None:
+        if api_proc is not None:
+            _terminate(api_proc, "api-server")
+        _terminate(gw_proc, "gateway")
+
+    # ── 3. Agent loop in this process ───────────────────────────────────
     os.environ["GATEWAY_HOST"] = "127.0.0.1"
-    os.environ["GATEWAY_PORT"] = str(port)
+    os.environ["GATEWAY_PORT"] = str(gw_port)
+
     try:
-        # Run agent in this process (blocks until Ctrl+C)
         from claw_swarm.agent_runner import main as agent_main
 
         return agent_main()
     finally:
-        kill_gateway()
+        _kill_all()
 
 
 def cmd_settings(_args: argparse.Namespace) -> int:
@@ -120,6 +174,8 @@ def cmd_settings(_args: argparse.Namespace) -> int:
         "GATEWAY_HOST",
         "GATEWAY_PORT",
         "GATEWAY_TLS",
+        "API_PORT",
+        "API_KEY",
         "AGENT_MODEL",
         "OPENAI_API_KEY",
         "ANTHROPIC_API_KEY",
@@ -154,17 +210,85 @@ def main() -> int:
     """
     parser = argparse.ArgumentParser(
         prog="clawswarm",
-        description="ClawSwarm CLI: run the messaging gateway and agent.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=(
+            "ClawSwarm — hierarchical multi-agent swarm for Telegram, "
+            "Discord, WhatsApp, and HTTP.\n"
+            "\n"
+            "Quick start:\n"
+            "  clawswarm run               # messaging platforms only\n"
+            "  clawswarm run --api         # + public REST API on :8080\n"
+            "  clawswarm run --api --port 9000\n"
+            "  clawswarm settings          # show current config\n"
+        ),
+        epilog=(
+            "Docs: https://github.com/The-Swarm-Corporation/ClawSwarm"
+        ),
     )
-    subparsers = parser.add_subparsers(dest="command", help="Command")
+    subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
 
+    # ── run ──────────────────────────────────────────────────────────────
     run_p = subparsers.add_parser(
-        "run", help="Run gateway and agent (gateway in subprocess)"
+        "run",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        help="Start the gRPC gateway and swarm agent",
+        description=(
+            "Start the ClawSwarm stack.\n"
+            "\n"
+            "Always starts:\n"
+            "  • Messaging Gateway  — gRPC server that bridges Telegram /\n"
+            "                         Discord / WhatsApp into a unified queue\n"
+            "  • Agent loop         — polls the gateway, runs the hierarchical\n"
+            "                         swarm, and sends replies back\n"
+            "\n"
+            "With --api also starts:\n"
+            "  • HTTP API Server    — FastAPI/uvicorn on 0.0.0.0:PORT\n"
+            "                         Prints your public IP on startup so\n"
+            "                         you know the exact URL to share.\n"
+            "\n"
+            "Key env vars (set in .env or environment):\n"
+            "  GATEWAY_HOST    gRPC bind host        (default: [::])\n"
+            "  GATEWAY_PORT    gRPC port             (default: 50051)\n"
+            "  API_PORT        HTTP API port         (default: 8080)\n"
+            "  API_KEY         Lock the API behind   X-API-Key: <value>\n"
+            "  OPENAI_API_KEY  Required for the swarm director (gpt-4.1)\n"
+            "\n"
+            "HTTP API endpoints (when --api is used):\n"
+            "  POST /v1/agent/completions        submit task (async)\n"
+            "  POST /v1/agent/completions/sync   submit task and wait\n"
+            "  GET  /v1/agent/jobs/{id}          poll job status / result\n"
+            "  GET  /v1/agent/jobs               list recent jobs\n"
+            "  GET  /docs                        Swagger UI\n"
+        ),
+    )
+    run_p.add_argument(
+        "--api",
+        action="store_true",
+        default=False,
+        help=(
+            "Start the public HTTP API server alongside the agent. "
+            "Your public IP is printed on startup."
+        ),
+    )
+    run_p.add_argument(
+        "--port",
+        type=int,
+        default=8080,
+        metavar="PORT",
+        help="HTTP API port — default 8080 (overrides API_PORT env var)",
     )
     run_p.set_defaults(func=cmd_run)
 
+    # ── settings ─────────────────────────────────────────────────────────
     set_p = subparsers.add_parser(
-        "settings", help="Show current settings (env / .env)"
+        "settings",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        help="Print current configuration (env / .env)",
+        description=(
+            "Print all ClawSwarm configuration keys loaded from the "
+            "environment or a .env file.\n"
+            "Secret values (tokens, API keys) are truncated for safety."
+        ),
     )
     set_p.set_defaults(func=cmd_settings)
 

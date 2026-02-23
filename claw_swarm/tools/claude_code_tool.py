@@ -14,8 +14,6 @@ from claude_agent_sdk import (
     TextBlock,
 )
 
-from claw_swarm.agent.prompts import build_agent_system_prompt
-
 TOOLS_PRESET_CLAUDE_CODE: dict[str, Any] = {
     "type": "preset",
     "preset": "claude_code",
@@ -63,6 +61,8 @@ async def stream_claude_agent(
         prompt: System prompt (agent instructions).
         tasks: The user's input / task to execute (sent to the agent).
     """
+    from claw_swarm.agent.prompts import build_agent_system_prompt
+
     combined_system = build_agent_system_prompt(
         name=name, description=description, system_prompt=prompt
     )
