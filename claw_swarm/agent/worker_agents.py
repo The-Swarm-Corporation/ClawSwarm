@@ -36,7 +36,7 @@ import os
 
 from swarms import Agent
 
-from claw_swarm.prompts import build_agent_system_prompt
+from claw_swarm.agent.prompts import build_agent_system_prompt
 from claw_swarm.tools.claude_code_tool import run_claude_agent
 from claw_swarm.tools.launch_tokens import claim_fees, launch_token
 

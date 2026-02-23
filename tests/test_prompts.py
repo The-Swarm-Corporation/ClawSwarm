@@ -5,7 +5,7 @@ Unit tests for claw_swarm.prompts.
 from __future__ import annotations
 
 
-from claw_swarm.prompts import (
+from claw_swarm.agent.prompts import (
     AGENT_DESCRIPTION_PREFIX,
     AGENT_NAME_PREFIX,
     CLAUDE_HELPER_DESCRIPTION,

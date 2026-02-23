@@ -4,7 +4,7 @@ import re
 import traceback
 
 from swarms import Agent, HierarchicalSwarm
-from claw_swarm.prompts import (
+from claw_swarm.agent.prompts import (
     CLAUDE_HELPER_DESCRIPTION,
     CLAUDE_HELPER_NAME,
     CLAUDE_TOOL_SYSTEM,

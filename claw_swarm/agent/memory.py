@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # Project root: directory containing the claw_swarm package
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 MEMORY_FILENAME = os.environ.get(
     "AGENT_MEMORY_FILE", "agent_memory.md"
 )

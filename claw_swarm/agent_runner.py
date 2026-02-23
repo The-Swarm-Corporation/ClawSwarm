@@ -17,12 +17,12 @@ from typing import Callable, Optional
 
 from claw_swarm.agent import create_agent, summarize_for_telegram
 from claw_swarm.gateway.proto import messaging_gateway_pb2 as pb
-from claw_swarm.prompts import CLAWSWARM_SYSTEM
+from claw_swarm.agent.prompts import CLAWSWARM_SYSTEM
 from claw_swarm.gateway.proto import (
     messaging_gateway_pb2_grpc as pb_grpc,
 )
 from claw_swarm.gateway.schema import UnifiedMessage
-from claw_swarm.memory import append_interaction, read_memory
+from claw_swarm.agent.memory import append_interaction, read_memory
 from claw_swarm.replier import send_message_async
 
 

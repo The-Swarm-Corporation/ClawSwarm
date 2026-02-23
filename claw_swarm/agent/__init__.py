@@ -1,5 +1,3 @@
-"""ClawSwarm agent package. Public API is in main and worker_agents."""
-
 from claw_swarm.agent.main import (
     call_claude,
     create_agent,

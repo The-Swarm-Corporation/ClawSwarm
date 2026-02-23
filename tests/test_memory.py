@@ -5,7 +5,7 @@ Unit tests for claw_swarm.memory.
 from __future__ import annotations
 
 
-from claw_swarm import memory
+from claw_swarm.agent import memory
 
 
 class TestGetMemoryPath:
@@ -41,7 +41,7 @@ class TestReadMemory:
             raise OSError("read failed")
 
         monkeypatch.setattr(
-            "claw_swarm.memory.get_memory_path",
+            "claw_swarm.agent.memory.get_memory_path",
             lambda: __import__("pathlib").Path(
                 "/nonexistent/dir/file.md"
             ),
@@ -53,7 +53,9 @@ class TestReadMemory:
     def test_trims_to_max_chars_when_over_limit(
         self, mock_memory_path, monkeypatch
     ):
-        monkeypatch.setattr("claw_swarm.memory.MAX_MEMORY_CHARS", 10)
+        monkeypatch.setattr(
+            "claw_swarm.agent.memory.MAX_MEMORY_CHARS", 10
+        )
         mock_memory_path.write_text(
             "0123456789extra", encoding="utf-8"
         )

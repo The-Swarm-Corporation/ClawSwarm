@@ -14,7 +14,7 @@ from claude_agent_sdk import (
     TextBlock,
 )
 
-from claw_swarm.prompts import build_agent_system_prompt
+from claw_swarm.agent.prompts import build_agent_system_prompt
 
 TOOLS_PRESET_CLAUDE_CODE: dict[str, Any] = {
     "type": "preset",
