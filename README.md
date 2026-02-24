@@ -32,6 +32,7 @@
 
 **A smaller, lighter-weight version of [OpenClaw](https://github.com/openclaw/openclaw)**—natively multi-agent, compiles to Rust, and built on the **[Swarms](https://github.com/kyegomez/swarms) framework** and Swarms ecosystem. One API, unified messaging across Telegram, Discord, and WhatsApp with optional Claude-powered reasoning. Production-ready: gRPC gateway, prompts in code (`claw_swarm.prompts`), and 24/7 operation. Dockerfile included (Python 3.12).
 
+
 ---
 
 ## Requirements
@@ -246,6 +247,13 @@ flowchart LR
 | **Compile to Rust** | Path included | No |
 | **Footprint** | Lean, minimal dependencies | Full-featured, larger surface area |
 | **Best for** | Multi-agent messaging layer, extensible bots | Full personal AI assistant product |
+
+
+---
+
+## Docs
+
+- [Configuration & CLI Reference](docs/cli_config.md) — `claw_config.yaml` schema, config precedence, all CLI flags, production examples, and troubleshooting
 
 
 ---
