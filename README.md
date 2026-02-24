@@ -71,7 +71,8 @@ Set these in your shell or in a `.env` file (e.g. `--env-file .env` with Docker)
 | `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp Cloud API phone number ID | — |
 | `WHATSAPP_QUEUE_PATH` | Optional WhatsApp queue path | — |
 | **Agent** | | |
-| `AGENT_MODEL` | Swarms agent model | `gpt-4o-mini` |
+| `AGENT_MODEL` | Swarms director / default agent model | `gpt-4o-mini` |
+| `WORKER_MODEL_NAME` | Worker agents model (Response/Search/TokenLaunch/Developer). If set, overrides `AGENT_MODEL` for workers. | — (falls back to `AGENT_MODEL` then `gpt-4o-mini`) |
 | `OPENAI_API_KEY` | OpenAI API key (for agent model) | — |
 | `ANTHROPIC_API_KEY` | Anthropic API key (for Claude tool) | — |
 | **Memory** | | |
@@ -265,6 +266,7 @@ Messages are normalized to a single schema: `UnifiedMessage` (id, platform, chan
    OPENAI_API_KEY=...
    ANTHROPIC_API_KEY=...
    AGENT_MODEL=gpt-4o-mini
+   WORKER_MODEL_NAME=gpt-4o-mini
    ```
 
 4. **Deploy.** Railway auto-detects the `Dockerfile` and builds the image. The service starts with `clawswarm run`.

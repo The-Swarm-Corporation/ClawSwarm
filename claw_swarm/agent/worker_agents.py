@@ -32,11 +32,10 @@ Usage:
 
 from __future__ import annotations
 
-import os
-
 from swarms import Agent
 
 from claw_swarm.agent.prompts import build_agent_system_prompt
+from claw_swarm.agent.model_config import resolve_model
 from claw_swarm.tools.claude_code_tool import run_claude_agent
 from claw_swarm.tools.launch_tokens import claim_fees, launch_token
 
@@ -218,7 +217,7 @@ def create_response_agent(
     Args:
         agent_name: Name for the agent instance.
         system_prompt: Override the default response specialist prompt.
-        model_name: Model to use; defaults to env AGENT_MODEL or "gpt-4o-mini".
+        model_name: Model to use; defaults to WORKER_MODEL_NAME, or AGENT_MODEL, or "gpt-4o-mini".
 
     Returns:
         Agent with no tools, for greetings and general Q&A.
@@ -229,11 +228,7 @@ def create_response_agent(
         description=RESPONSE_AGENT_DESCRIPTION,
         system_prompt=prompt,
     )
-    model = (
-        model_name
-        or os.environ.get("AGENT_MODEL", "gpt-4o-mini").strip()
-        or "gpt-4o-mini"
-    )
+    model = resolve_model(model_name, default="gpt-4o-mini")
     return Agent(
         agent_name=agent_name,
         agent_description=RESPONSE_AGENT_DESCRIPTION,
@@ -259,7 +254,7 @@ def create_search_agent(
     Args:
         agent_name: Name for the agent instance.
         system_prompt: Override the default search specialist prompt.
-        model_name: Model to use; defaults to env AGENT_MODEL or "gpt-4o-mini".
+        model_name: Model to use; defaults to WORKER_MODEL_NAME, or AGENT_MODEL, or "gpt-4o-mini".
 
     Returns:
         Agent configured with exa_search as its tool.
@@ -274,11 +269,7 @@ def create_search_agent(
         description=SEARCH_AGENT_DESCRIPTION,
         system_prompt=prompt,
     )
-    model = (
-        model_name
-        or os.environ.get("AGENT_MODEL", "gpt-4o-mini").strip()
-        or "gpt-4o-mini"
-    )
+    model = resolve_model(model_name, default="gpt-4o-mini")
     return Agent(
         agent_name=agent_name,
         agent_description=SEARCH_AGENT_DESCRIPTION,
@@ -305,7 +296,7 @@ def create_token_launch_agent(
     Args:
         agent_name: Name for the agent instance.
         system_prompt: Override the default token launch prompt.
-        model_name: Model to use; defaults to env AGENT_MODEL or "gpt-4o-mini".
+        model_name: Model to use; defaults to WORKER_MODEL_NAME, or AGENT_MODEL, or "gpt-4o-mini".
 
     Returns:
         Agent configured with launch_token and claim_fees as tools.
@@ -320,11 +311,7 @@ def create_token_launch_agent(
         description=TOKEN_LAUNCH_AGENT_DESCRIPTION,
         system_prompt=prompt,
     )
-    model = (
-        model_name
-        or os.environ.get("AGENT_MODEL", "gpt-4o-mini").strip()
-        or "gpt-4o-mini"
-    )
+    model = resolve_model(model_name, default="gpt-4o-mini")
     return Agent(
         agent_name=agent_name,
         agent_description=TOKEN_LAUNCH_AGENT_DESCRIPTION,
@@ -352,7 +339,7 @@ def create_developer_agent(
     Args:
         agent_name: Name for the agent instance.
         system_prompt: Override the default developer specialist prompt.
-        model_name: Model to use; defaults to env AGENT_MODEL or "gpt-4o-mini".
+        model_name: Model to use; defaults to WORKER_MODEL_NAME, or AGENT_MODEL, or "gpt-4o-mini".
 
     Returns:
         Agent configured with run_claude_developer (Claude Code) as its tool.
@@ -367,11 +354,7 @@ def create_developer_agent(
         description=DEVELOPER_AGENT_DESCRIPTION,
         system_prompt=prompt,
     )
-    model = (
-        model_name
-        or os.environ.get("AGENT_MODEL", "gpt-4o-mini").strip()
-        or "gpt-4o-mini"
-    )
+    model = resolve_model(model_name, default="gpt-4o-mini")
     return Agent(
         agent_name=agent_name,
         agent_description=DEVELOPER_AGENT_DESCRIPTION,

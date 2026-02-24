@@ -98,6 +98,30 @@ def _print_ready_table(
     console.print(table)
 
 
+def _detect_models() -> tuple[str, list[str], list[str]]:
+    """
+    Inspect environment for model-related configuration.
+
+    Returns:
+        agent_model: The configured AGENT_MODEL (or default).
+        available: Human labels for providers with non-empty keys.
+        missing: Human labels for providers without keys set.
+    """
+    agent_model = os.environ.get("AGENT_MODEL", "gpt-4o-mini")
+    providers: list[tuple[str, str]] = [
+        ("OpenAI", "OPENAI_API_KEY"),
+        ("Anthropic", "ANTHROPIC_API_KEY"),
+    ]
+    available: list[str] = []
+    missing: list[str] = []
+    for label, env_key in providers:
+        if os.environ.get(env_key):
+            available.append(label)
+        else:
+            missing.append(label)
+    return agent_model, available, missing
+
+
 def main() -> None:
     version = os.environ.get("GATEWAY_VERSION", "0.1.0")
 
@@ -127,6 +151,23 @@ def main() -> None:
         "enabled" if use_tls else "disabled",
         style="green" if use_tls else "yellow",
     )
+    agent_model, available_models, missing_models = _detect_models()
+    _print_init_step("⚙", "Agent model", agent_model)
+    if available_models:
+        _print_init_step(
+            "⚙",
+            "Model providers",
+            ", ".join(available_models),
+        )
+    else:
+        console.print(
+            "  [dim]–  Model providers  "
+            "(no model API keys found; set OPENAI_API_KEY or ANTHROPIC_API_KEY)[/dim]"
+        )
+    if missing_models and available_models:
+        console.print(
+            f"  [dim]–  Missing model providers  {', '.join(missing_models)}[/dim]"
+        )
     console.print()
 
     # --- load TLS credentials ---

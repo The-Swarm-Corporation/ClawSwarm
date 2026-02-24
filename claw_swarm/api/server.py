@@ -71,9 +71,7 @@ class JobRecord(BaseModel):
     result: Optional[str] = None
     error: Optional[str] = None
     created_at: str = Field(
-        default_factory=lambda: datetime.now(
-            timezone.utc
-        ).isoformat()
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
     completed_at: Optional[str] = None
 
@@ -281,9 +279,7 @@ async def _lifespan(app: FastAPI):
     )
     if _API_KEY:
         body.append("\n  Auth:   ", style="dim")
-        body.append(
-            "X-API-Key header required\n", style="bold red"
-        )
+        body.append("X-API-Key header required\n", style="bold red")
     else:
         body.append("\n  Auth:   ", style="dim")
         body.append(

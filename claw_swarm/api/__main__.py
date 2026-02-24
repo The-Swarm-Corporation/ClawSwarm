@@ -1,7 +1,5 @@
 """Allow ``python -m claw_swarm.api`` to start the API server."""
 
-import os
-
 from dotenv import load_dotenv
 
 load_dotenv()

@@ -12,6 +12,7 @@ from claw_swarm.agent.prompts import (
     build_director_system_prompt,
 )
 from claw_swarm.tools import run_claude_agent
+from claw_swarm.agent.model_config import resolve_model
 from claw_swarm.agent.worker_agents import (
     create_developer_agent,
     create_response_agent,
@@ -130,13 +131,13 @@ _EMOJI_PATTERN = re.compile(
 )
 
 
-def _create_telegram_summarizer_agent() -> Agent:
-    """Create an agent that summarizes long output for Telegram (no emojis)."""
+def _create_summarizer_agent() -> Agent:
+    """Create an agent that summarizes long output (no emojis)."""
     return Agent(
-        agent_name="ClawSwarm-TelegramSummarizer",
-        agent_description="Summarizes swarm output for Telegram chat; no emojis.",
+        agent_name="ClawSwarm-Summarizer",
+        agent_description="Summarizes swarm output into concise messages; no emojis.",
         system_prompt=TELEGRAM_SUMMARY_SYSTEM,
-        model_name="gpt-4.1",
+        model_name=resolve_model(None, default="gpt-4.1"),
         max_loops=1,
     )
 
@@ -158,7 +159,7 @@ def summarize_for_telegram(swarm_output: str) -> str:
     if not swarm_output or not str(swarm_output).strip():
         return ""
 
-    summarizer = _create_telegram_summarizer_agent()
+    summarizer = _create_summarizer_agent()
 
     out = summarizer.run(
         f"Summarize the following output for a Telegram message. No emojis.\n\n{swarm_output}"

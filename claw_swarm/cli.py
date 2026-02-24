@@ -177,6 +177,7 @@ def cmd_settings(_args: argparse.Namespace) -> int:
         "API_PORT",
         "API_KEY",
         "AGENT_MODEL",
+        "WORKER_MODEL_NAME",
         "OPENAI_API_KEY",
         "ANTHROPIC_API_KEY",
         "TELEGRAM_BOT_TOKEN",
@@ -225,7 +226,9 @@ def main() -> int:
             "Docs: https://github.com/The-Swarm-Corporation/ClawSwarm"
         ),
     )
-    subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
+    subparsers = parser.add_subparsers(
+        dest="command", metavar="COMMAND"
+    )
 
     # ── run ──────────────────────────────────────────────────────────────
     run_p = subparsers.add_parser(
