@@ -1,0 +1,14 @@
+agent:
+  name: clawswarm
+  description: next generation productivity agent
+worker:
+  model_name: gpt-4.1
+gateway:
+  host: '[::]'
+  port: 50051
+  tls: true
+api:
+  port: 8080
+  key: ''
+runtime:
+  verbose: true

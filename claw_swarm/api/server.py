@@ -48,6 +48,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from claw_swarm.agent import create_agent, summarize_for_telegram
+from claw_swarm.config import apply_config_to_env, load_config
 from claw_swarm.agent.memory import (
     append_interaction,
     read_memory,
@@ -56,6 +57,15 @@ from claw_swarm.agent.prompts import CLAWSWARM_SYSTEM
 from claw_swarm.agent_runner import _extract_final_reply
 
 console = Console()
+
+# Load central config (if present) so the API respects the same
+# settings as the CLI, without prompting.
+try:
+    _cfg = load_config()
+    apply_config_to_env(_cfg)
+except Exception:
+    # Fail open: keep defaults if config cannot be loaded.
+    pass
 
 # ---------------------------------------------------------------------------
 # In-memory job store

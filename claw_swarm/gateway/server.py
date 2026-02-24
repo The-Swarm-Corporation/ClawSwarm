@@ -6,6 +6,7 @@ Uses TLS when credentials are provided (secure by default in production).
 from __future__ import annotations
 
 import asyncio
+import socket
 from typing import Sequence
 
 import grpc
@@ -151,6 +152,12 @@ async def run_server(
     server = grpc_aio.server()
     servicer = MessagingGatewayServicer(adapters, version=version)
     pb_grpc.add_MessagingGatewayServicer_to_server(servicer, server)
+
+    if port == 0:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind((host, 0))
+            port = int(s.getsockname()[1])
+
     if use_tls and server_credentials is not None:
         server.add_secure_port(f"{host}:{port}", server_credentials)
     else:

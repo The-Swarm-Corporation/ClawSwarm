@@ -25,4 +25,3 @@ def resolve_model(model_name: str | None, *, default: str) -> str:
         return agent_env
 
     return default
-

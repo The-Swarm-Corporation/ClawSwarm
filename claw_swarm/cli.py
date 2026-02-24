@@ -1,12 +1,16 @@
 """
-Simple CLI for ClawSwarm: run (gateway + agent) and settings.
+CLI for ClawSwarm: run, settings, onboarding.
 
 Usage:
-  clawswarm --help
-  clawswarm run                    # gateway + agent only
-  clawswarm run --api              # gateway + agent + public HTTP API
-  clawswarm run --api --port 9000  # custom HTTP API port
-  clawswarm settings
+  clawswarm run                        # gateway + agent
+  clawswarm run --api                  # + HTTP API on :8080
+  clawswarm run --api --port 9000      # custom API port
+  clawswarm run --gw-port 50052        # custom gateway port
+  clawswarm run --gw-tls               # enable gateway TLS
+  clawswarm run --api-key secret       # lock API with a key
+  clawswarm settings                   # show live config
+  clawswarm onboarding                 # create claw_config.yaml
+  clawswarm onboarding --force         # overwrite existing config
 """
 
 from __future__ import annotations
@@ -18,6 +22,17 @@ import sys
 import time
 
 from dotenv import load_dotenv
+from rich import box
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
+from claw_swarm.config import (
+    ensure_config_interactive,
+    onboarding_interactive,
+)
+
+_console = Console()
 
 
 def _find_dotenv_path() -> str | None:
@@ -95,10 +110,25 @@ def cmd_run(args: argparse.Namespace) -> int:
         0 on normal exit, non-zero if a subprocess fails to start.
     """
     _ensure_dotenv()
+    # Load claw_config.yaml; applies defaults to env via setdefault.
+    ensure_config_interactive()
+
+    # CLI flags override config / env (explicit > config > default).
+    if args.gw_host:
+        os.environ["GATEWAY_HOST"] = args.gw_host
+    if args.gw_port is not None:
+        os.environ["GATEWAY_PORT"] = str(args.gw_port)
+    if args.gw_tls:
+        os.environ["GATEWAY_TLS"] = "1"
+    if args.api_key:
+        os.environ["API_KEY"] = args.api_key
+    # --port always wins over API_PORT from config
+    if args.port != 8080 or not os.environ.get("API_PORT"):
+        os.environ["API_PORT"] = str(args.port)
 
     gw_host = os.environ.get("GATEWAY_HOST", "[::]")
     gw_port = int(os.environ.get("GATEWAY_PORT", "50051"))
-    api_port = int(os.environ.get("API_PORT", str(args.port)))
+    api_port = int(os.environ.get("API_PORT", "8080"))
 
     env = os.environ.copy()
     env["GATEWAY_HOST"] = gw_host
@@ -170,32 +200,71 @@ def cmd_settings(_args: argparse.Namespace) -> int:
         0 always.
     """
     _ensure_dotenv()
-    keys = [
-        "GATEWAY_HOST",
-        "GATEWAY_PORT",
-        "GATEWAY_TLS",
-        "API_PORT",
+
+    _SECTIONS = {
+        "Gateway": [
+            "GATEWAY_HOST",
+            "GATEWAY_PORT",
+            "GATEWAY_TLS",
+        ],
+        "API": ["API_PORT", "API_KEY"],
+        "Models": ["AGENT_MODEL", "WORKER_MODEL_NAME"],
+        "Platforms": [
+            "OPENAI_API_KEY",
+            "ANTHROPIC_API_KEY",
+            "TELEGRAM_BOT_TOKEN",
+            "DISCORD_BOT_TOKEN",
+            "DISCORD_CHANNEL_IDS",
+            "WHATSAPP_ACCESS_TOKEN",
+            "WHATSAPP_PHONE_NUMBER_ID",
+        ],
+    }
+
+    _SECRET_SUFFIXES = (
+        "_TOKEN",
+        "_KEY",
+        "ACCESS_TOKEN",
         "API_KEY",
-        "AGENT_MODEL",
-        "WORKER_MODEL_NAME",
-        "OPENAI_API_KEY",
-        "ANTHROPIC_API_KEY",
-        "TELEGRAM_BOT_TOKEN",
-        "DISCORD_BOT_TOKEN",
-        "DISCORD_CHANNEL_IDS",
-        "WHATSAPP_ACCESS_TOKEN",
-        "WHATSAPP_PHONE_NUMBER_ID",
-    ]
-    print("ClawSwarm settings (from .env / environment):")
-    print("-" * 50)
-    for key in keys:
-        val = os.environ.get(key, "")
-        if val and key.endswith(
-            ("_TOKEN", "_KEY", "ACCESS_TOKEN", "API_KEY")
-        ):
-            val = val[:8] + "..." if len(val) > 8 else "***"
-        print(f"  {key}={val or '(not set)'}")
-    print("-" * 50)
+    )
+
+    def _mask(key: str, val: str) -> str:
+        if val and key.endswith(_SECRET_SUFFIXES):
+            return val[:8] + "..." if len(val) > 8 else "***"
+        return val or "[dim](not set)[/dim]"
+
+    _console.print()
+    for section, keys in _SECTIONS.items():
+        table = Table(
+            box=box.ROUNDED,
+            border_style="cyan",
+            show_header=False,
+            padding=(0, 1),
+        )
+        table.add_column(style="bold", justify="right")
+        table.add_column(style="cyan")
+        for key in keys:
+            val = _mask(key, os.environ.get(key, ""))
+            table.add_row(key, val)
+        _console.print(
+            Panel(
+                table,
+                title=f"[bold cyan]{section}[/bold cyan]",
+                border_style="cyan",
+                padding=(0, 1),
+            )
+        )
+        _console.print()
+    return 0
+
+
+def cmd_onboarding(args: argparse.Namespace) -> int:
+    """
+    Interactive onboarding wizard that creates ``claw_config.yaml``.
+
+    Use --force to overwrite an existing config file.
+    """
+    _ensure_dotenv()
+    onboarding_interactive(force=bool(args.force))
     return 0
 
 
@@ -213,17 +282,25 @@ def main() -> int:
         prog="clawswarm",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=(
-            "ClawSwarm — hierarchical multi-agent swarm for Telegram, "
-            "Discord, WhatsApp, and HTTP.\n"
+            "ClawSwarm — hierarchical multi-agent swarm for\n"
+            "Telegram, Discord, WhatsApp, and HTTP.\n"
             "\n"
             "Quick start:\n"
-            "  clawswarm run               # messaging platforms only\n"
-            "  clawswarm run --api         # + public REST API on :8080\n"
-            "  clawswarm run --api --port 9000\n"
-            "  clawswarm settings          # show current config\n"
+            "  clawswarm onboarding             "
+            "# create claw_config.yaml\n"
+            "  clawswarm run                    "
+            "# gateway + agent\n"
+            "  clawswarm run --api              "
+            "# + REST API on :8080\n"
+            "  clawswarm run --api --port 9000  "
+            "# custom API port\n"
+            "  clawswarm settings               "
+            "# show live config\n"
         ),
         epilog=(
-            "Docs: https://github.com/The-Swarm-Corporation/ClawSwarm"
+            "Config file: claw_config.yaml  (run 'onboarding' to create)\n"
+            "Env file:    .env              (secrets: API keys, tokens)\n"
+            "Docs:        https://github.com/The-Swarm-Corporation/ClawSwarm"
         ),
     )
     subparsers = parser.add_subparsers(
@@ -239,27 +316,39 @@ def main() -> int:
             "Start the ClawSwarm stack.\n"
             "\n"
             "Always starts:\n"
-            "  • Messaging Gateway  — gRPC server that bridges Telegram /\n"
-            "                         Discord / WhatsApp into a unified queue\n"
-            "  • Agent loop         — polls the gateway, runs the hierarchical\n"
-            "                         swarm, and sends replies back\n"
+            "  • Messaging Gateway  — gRPC server bridging Telegram /\n"
+            "                         Discord / WhatsApp into a unified\n"
+            "                         message queue\n"
+            "  • Agent loop         — polls the gateway, runs the\n"
+            "                         hierarchical swarm, sends replies\n"
             "\n"
             "With --api also starts:\n"
             "  • HTTP API Server    — FastAPI/uvicorn on 0.0.0.0:PORT\n"
-            "                         Prints your public IP on startup so\n"
-            "                         you know the exact URL to share.\n"
+            "                         Prints your public IP on startup\n"
             "\n"
-            "Key env vars (set in .env or environment):\n"
-            "  GATEWAY_HOST    gRPC bind host        (default: [::])\n"
-            "  GATEWAY_PORT    gRPC port             (default: 50051)\n"
-            "  API_PORT        HTTP API port         (default: 8080)\n"
-            "  API_KEY         Lock the API behind   X-API-Key: <value>\n"
-            "  OPENAI_API_KEY  Required for the swarm director (gpt-4.1)\n"
+            "Config precedence (highest → lowest):\n"
+            "  CLI flags  >  env vars / .env  >  claw_config.yaml\n"
+            "\n"
+            "claw_config.yaml keys (run 'onboarding' to set):\n"
+            "  gateway.host     gRPC bind host   (default: [::])\n"
+            "  gateway.port     gRPC port        (default: 50051)\n"
+            "  gateway.tls      enable TLS       (default: false)\n"
+            "  api.port         HTTP API port    (default: 8080)\n"
+            "  api.key          API auth key     (default: open)\n"
+            "  worker.model_name                 (default: gpt-4o-mini)\n"
+            "\n"
+            "Env vars (secrets; set in .env or shell):\n"
+            "  OPENAI_API_KEY       required for the swarm director\n"
+            "  ANTHROPIC_API_KEY    optional Claude reasoning layer\n"
+            "  TELEGRAM_BOT_TOKEN   Telegram platform adapter\n"
+            "  DISCORD_BOT_TOKEN    Discord platform adapter\n"
+            "  DISCORD_CHANNEL_IDS  comma-separated channel IDs\n"
+            "  WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID\n"
             "\n"
             "HTTP API endpoints (when --api is used):\n"
             "  POST /v1/agent/completions        submit task (async)\n"
             "  POST /v1/agent/completions/sync   submit task and wait\n"
-            "  GET  /v1/agent/jobs/{id}          poll job status / result\n"
+            "  GET  /v1/agent/jobs/{id}          poll job status\n"
             "  GET  /v1/agent/jobs               list recent jobs\n"
             "  GET  /docs                        Swagger UI\n"
         ),
@@ -269,8 +358,8 @@ def main() -> int:
         action="store_true",
         default=False,
         help=(
-            "Start the public HTTP API server alongside the agent. "
-            "Your public IP is printed on startup."
+            "Start the public HTTP API server alongside the agent "
+            "(FastAPI/uvicorn). Public IP is printed on startup."
         ),
     )
     run_p.add_argument(
@@ -278,7 +367,47 @@ def main() -> int:
         type=int,
         default=8080,
         metavar="PORT",
-        help="HTTP API port — default 8080 (overrides API_PORT env var)",
+        help=(
+            "HTTP API listen port (default: 8080). "
+            "Overrides api.port in claw_config.yaml and API_PORT env var."
+        ),
+    )
+    run_p.add_argument(
+        "--gw-host",
+        metavar="HOST",
+        default=None,
+        help=(
+            "Gateway gRPC bind host (e.g. 0.0.0.0). "
+            "Overrides gateway.host in claw_config.yaml."
+        ),
+    )
+    run_p.add_argument(
+        "--gw-port",
+        type=int,
+        metavar="PORT",
+        default=None,
+        help=(
+            "Gateway gRPC port (default: 50051). "
+            "Overrides gateway.port in claw_config.yaml."
+        ),
+    )
+    run_p.add_argument(
+        "--gw-tls",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable TLS on the gRPC gateway. "
+            "Overrides gateway.tls in claw_config.yaml."
+        ),
+    )
+    run_p.add_argument(
+        "--api-key",
+        metavar="KEY",
+        default=None,
+        help=(
+            "Require X-API-Key: <KEY> on all /v1/* requests. "
+            "Overrides api.key in claw_config.yaml and API_KEY env var."
+        ),
     )
     run_p.set_defaults(func=cmd_run)
 
@@ -286,14 +415,53 @@ def main() -> int:
     set_p = subparsers.add_parser(
         "settings",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        help="Print current configuration (env / .env)",
+        help="Show live configuration (config file + env)",
         description=(
-            "Print all ClawSwarm configuration keys loaded from the "
-            "environment or a .env file.\n"
-            "Secret values (tokens, API keys) are truncated for safety."
+            "Display all active ClawSwarm configuration values.\n"
+            "\n"
+            "Merges claw_config.yaml → .env → environment variables\n"
+            "and prints them grouped by section. Secret values\n"
+            "(tokens, API keys) are masked for safety.\n"
+            "\n"
+            "Sections shown:\n"
+            "  Gateway   — gRPC host, port, TLS\n"
+            "  API       — HTTP port, auth key\n"
+            "  Models    — director and worker model names\n"
+            "  Platforms — Telegram, Discord, WhatsApp credentials\n"
         ),
     )
     set_p.set_defaults(func=cmd_settings)
+
+    # ── onboarding ───────────────────────────────────────────────────────
+    on_p = subparsers.add_parser(
+        "onboarding",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        help="Create or update claw_config.yaml interactively",
+        description=(
+            "Run an interactive setup wizard to create\n"
+            "claw_config.yaml in the project root.\n"
+            "\n"
+            "Configures five sections:\n"
+            "  Agent    — name and description of the director agent\n"
+            "  Worker   — model name for worker agents (e.g. gpt-4o-mini)\n"
+            "  Gateway  — gRPC bind host, port, TLS toggle\n"
+            "  HTTP API — listen port, optional auth key\n"
+            "  Runtime  — verbose logging toggle\n"
+            "\n"
+            "All values have sensible defaults — just press Enter\n"
+            "to accept them. The file is written atomically once\n"
+            "all prompts are complete.\n"
+            "\n"
+            "Use --force to overwrite an existing claw_config.yaml.\n"
+        ),
+    )
+    on_p.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="Overwrite claw_config.yaml if it already exists",
+    )
+    on_p.set_defaults(func=cmd_onboarding)
 
     args = parser.parse_args()
     if not args.command:

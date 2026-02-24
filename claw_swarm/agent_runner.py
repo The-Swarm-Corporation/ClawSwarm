@@ -37,7 +37,7 @@ def _extract_final_reply(
     to Telegram/Discord/WhatsApp.
     """
     if not raw_output or not raw_output.strip():
-        return raw_output or ""
+        return ""
     text = raw_output.strip()
     marker = "[Current message to answer]"
     if marker in text:

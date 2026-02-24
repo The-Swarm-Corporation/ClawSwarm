@@ -109,15 +109,22 @@ def launch_token(
         payload["image"] = image
 
     with httpx.Client(timeout=timeout) as client:
+        url = f"{base_url.rstrip('/')}/api/token/launch"
         response = client.post(
-            f"{base_url.rstrip('/')}/api/token/launch",
+            url,
             headers={
                 "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json",
             },
             json=payload,
         )
-        response.raise_for_status()
+        if response.status_code >= 400:
+            req = response.request or httpx.Request("POST", url)
+            raise httpx.HTTPStatusError(
+                "HTTP error launching token",
+                request=req,
+                response=response,
+            )
         return json.dumps(response.json())
 
 
@@ -153,10 +160,17 @@ def claim_fees(
     }
 
     with httpx.Client(timeout=timeout) as client:
+        url = f"{base_url.rstrip('/')}/api/product/claimfees"
         response = client.post(
-            f"{base_url.rstrip('/')}/api/product/claimfees",
+            url,
             headers={"Content-Type": "application/json"},
             json=payload,
         )
-        response.raise_for_status()
+        if response.status_code >= 400:
+            req = response.request or httpx.Request("POST", url)
+            raise httpx.HTTPStatusError(
+                "HTTP error claiming fees",
+                request=req,
+                response=response,
+            )
         return json.dumps(response.json())

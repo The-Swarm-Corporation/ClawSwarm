@@ -23,6 +23,7 @@ from claw_swarm.gateway import (
     run_server,
 )
 from claw_swarm.gateway.adapters.base import MessageAdapter
+from claw_swarm.agent.model_config import resolve_model
 
 console = Console()
 
@@ -107,7 +108,7 @@ def _detect_models() -> tuple[str, list[str], list[str]]:
         available: Human labels for providers with non-empty keys.
         missing: Human labels for providers without keys set.
     """
-    agent_model = os.environ.get("AGENT_MODEL", "gpt-4o-mini")
+    agent_model = resolve_model(None, default="gpt-4.1")
     providers: list[tuple[str, str]] = [
         ("OpenAI", "OPENAI_API_KEY"),
         ("Anthropic", "ANTHROPIC_API_KEY"),

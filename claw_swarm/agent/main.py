@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import traceback
 
@@ -19,6 +20,13 @@ from claw_swarm.agent.worker_agents import (
     create_search_agent,
     create_token_launch_agent,
 )
+
+WORKER_AGENTS = [
+    create_response_agent(),
+    create_developer_agent(),
+    create_search_agent(),
+    create_token_launch_agent(),
+]
 
 
 def call_claude(task: str) -> str:
@@ -49,10 +57,22 @@ def call_claude(task: str) -> str:
     )
 
 
+def _agent_name(default: str = "ClawSwarm") -> str:
+    return os.environ.get("CLAWSWARM_AGENT_NAME", default)
+
+
+def _agent_description(
+    default: str = "A hierarchical swarm of agents that can "
+    "handle complex tasks",
+) -> str:
+    return os.environ.get("CLAWSWARM_AGENT_DESCRIPTION", default)
+
+
 def create_agent(
     *,
-    agent_name: str = "ClawSwarm",
+    agent_name: str | None = None,
     system_prompt: str | None = None,
+    description: str | None = None,
 ) -> HierarchicalSwarm:
     """
     Create the ClawSwarm hierarchical swarm: a director agent plus worker agents
@@ -77,24 +97,26 @@ def create_agent(
         >>> print(reply)
         'Python 3.12 introduces ...'
     """
+    name = agent_name or _agent_name()
+    desc = description or _agent_description()
+
+    director_model = (
+        os.environ.get("AGENT_MODEL", "").strip() or "gpt-4o-mini"
+    )
+
     director_system_prompt = build_director_system_prompt(
-        agent_name=agent_name,
+        agent_name=name,
         system_prompt=system_prompt,
     )
-    worker_agents = [
-        create_response_agent(),
-        create_developer_agent(),
-        create_search_agent(),
-        create_token_launch_agent(),
-    ]
     return HierarchicalSwarm(
-        name=agent_name,
-        description="A hierarchical swarm of agents that can handle complex tasks",
-        agents=worker_agents,
-        director_name=agent_name,
-        director_model_name="gpt-4.1",
+        name=name,
+        description=desc,
+        agents=WORKER_AGENTS,
+        director_name=name,
+        director_model_name=director_model,
         director_system_prompt=director_system_prompt,
         director_feedback_on=False,
+        director=None,
     )
 
 

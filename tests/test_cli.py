@@ -102,3 +102,12 @@ class TestMain:
                 code = cli.main()
         assert code == 42
         m.assert_called_once()
+
+    def test_onboarding_subcommand_calls_cmd_onboarding(self):
+        with patch.object(sys, "argv", ["clawswarm", "onboarding"]):
+            with patch(
+                "claw_swarm.cli.cmd_onboarding", return_value=7
+            ) as m:
+                code = cli.main()
+        assert code == 7
+        m.assert_called_once()
