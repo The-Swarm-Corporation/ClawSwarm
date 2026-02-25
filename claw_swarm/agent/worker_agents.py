@@ -41,6 +41,8 @@ from claw_swarm.tools.launch_tokens import claim_fees, launch_token
 
 from swarms_tools import exa_search
 
+from claw_swarm.tools.web_scraper import scrape_url, scrape_urls
+
 
 # =============================================================================
 # Prompts and agent metadata (all at top)
@@ -49,16 +51,35 @@ from swarms_tools import exa_search
 # ---- Search ----
 SEARCH_AGENT_NAME = "ClawSwarm-Search"
 SEARCH_AGENT_DESCRIPTION = (
-    "Specialized sub-agent for web and semantic search. Uses exa_search to find "
-    "current information, news, articles, and external sources."
+    "Specialized sub-agent for web research. Uses exa_search to find current "
+    "information, news, and articles, and scrape_url / scrape_urls to fetch and "
+    "read the full text of any web page given its URL."
 )
 SEARCH_SYSTEM_PROMPT = """
-You are a search specialist. Your only job is to run exa_search with clear, effective queries and return useful results.
+You are a search and web-research specialist. You have three tools:
 
-- **Input:** You receive a user request (topic, question, or research goal).
-- **Action:** Call exa_search with a well-formed search query. Use 1–2 queries if the request is broad; prefer one focused query when possible.
-- **Output:** Return the search results in a clear, readable form: summarize key findings, list relevant links with brief context, and note when results are sparse or off-topic.
-- **Scope:** Do not answer from memory. Always use exa_search. If the query is ambiguous, run a search anyway with the best interpretation and say what you searched for.
+1. **exa_search(query)** — semantic/web search. Use for discovering relevant pages, news, articles, and links on any topic.
+2. **scrape_url(url)** — fetch and extract the readable text of a single URL.
+3. **scrape_urls(urls)** — fetch multiple URLs at once (list or comma/newline-separated string) and return all their text content.
+
+## Workflow
+
+- **General research:** Start with exa_search to discover relevant sources, then use scrape_url or scrape_urls to read the full content of the most promising links.
+- **Direct URL request:** If the user provides one or more URLs and asks you to read or summarize them, call scrape_url / scrape_urls directly without searching first.
+- **Mixed:** You may combine search + scraping in sequence when needed.
+
+## Output
+
+- Summarize key findings in a clear, readable form.
+- List relevant links with brief context.
+- Quote or paraphrase specific passages when they directly answer the user's question.
+- Note when results are sparse, off-topic, or a page returned an error.
+
+## Scope
+
+- Do not answer from memory alone. Use your tools to fetch current information.
+- If a query is ambiguous, run a search with the best interpretation and state what you searched for.
+- If scraping fails (ERROR: prefix in result), note the failure and try the next best source.
 """
 
 # ---- Token launch ----
@@ -275,7 +296,7 @@ def create_search_agent(
         agent_description=SEARCH_AGENT_DESCRIPTION,
         system_prompt=full_system,
         model_name=model,
-        tools=[exa_search],
+        tools=[exa_search, scrape_url, scrape_urls],
         max_loops=1,
         output_type="final",
     )
@@ -361,6 +382,6 @@ def create_developer_agent(
         system_prompt=full_system,
         model_name=model,
         tools=[_run_claude_developer],
-        max_loops=5,
+        max_loops=1,
         output_type="final",
     )
