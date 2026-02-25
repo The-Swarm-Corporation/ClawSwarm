@@ -68,6 +68,14 @@ class TestExtractFinalReply:
         result = _extract_final_reply(raw, "?")
         assert "42" in result
 
+    def test_prefers_quoted_reply_over_runner_summary(self):
+        raw = (
+            "Director reply: “Hello! I’m ClawSwarm. How can I assist you today?”\n"
+            "Loop 1 of 1 has been completed by ClawSwarm under the Director’s supervision."
+        )
+        result = _extract_final_reply(raw, "hello")
+        assert "How can I assist you today" in result
+
 
 class TestGetGatewayTarget:
     """Test _get_gateway_target."""

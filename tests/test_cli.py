@@ -102,3 +102,29 @@ class TestMain:
                 code = cli.main()
         assert code == 42
         m.assert_called_once()
+
+    def test_init_subcommand_calls_cmd_init(self):
+        with patch.object(sys, "argv", ["clawswarm", "init"]):
+            with patch(
+                "claw_swarm.cli.cmd_init", return_value=7
+            ) as m:
+                code = cli.main()
+        assert code == 7
+        m.assert_called_once()
+
+
+class TestCmdInit:
+    def test_writes_env_and_returns_zero(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        answers = iter(["MyAgent", "Useful helper", "2"])
+        monkeypatch.setattr("builtins.input", lambda _p: next(answers))
+
+        code = cli.cmd_init(__import__("argparse").Namespace())
+
+        assert code == 0
+        env_path = tmp_path / ".env"
+        assert env_path.is_file()
+        text = env_path.read_text()
+        assert "AGENT_NAME=MyAgent" in text
+        assert "AGENT_DESCRIPTION=Useful helper" in text
+        assert "AGENT_MODEL=gpt-4o-mini" in text

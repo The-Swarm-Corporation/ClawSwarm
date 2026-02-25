@@ -35,6 +35,7 @@ import os
 
 from swarms import Agent
 
+from claw_swarm.config import load_agent_config
 from claw_swarm.prompts import (
     CLAUDE_HELPER_DESCRIPTION,
     CLAUDE_HELPER_NAME,
@@ -43,7 +44,7 @@ from claw_swarm.prompts import (
     CLAWSWARM_SYSTEM,
     build_agent_system_prompt,
 )
-from claw_swarm.tools import run_claude_agent
+from claw_swarm.tools import run_claude_agent, web_search
 from claw_swarm.tools.launch_tokens import claim_fees, launch_token
 
 
@@ -79,6 +80,7 @@ def create_agent(
     *,
     agent_name: str = "ClawSwarm",
     system_prompt: str | None = None,
+    config_path: str | None = None,
 ) -> Agent:
     """
     Create the ClawSwarm Swarms Agent, preloaded with system prompts and
@@ -104,27 +106,52 @@ def create_agent(
         >>> print(reply)
         'Python 3.12 introduces ...'
     """
-    base_system = system_prompt or CLAWSWARM_SYSTEM
+    config = load_agent_config(config_path)
+
+    configured_name = agent_name
+    if agent_name == "ClawSwarm" and config and config.name:
+        configured_name = config.name
+
+    configured_description = CLAWSWARM_AGENT_DESCRIPTION
+    if config and config.description:
+        configured_description = config.description
+
+    if system_prompt:
+        base_system = system_prompt
+    elif config and config.system_prompt:
+        base_system = config.system_prompt
+    else:
+        base_system = CLAWSWARM_SYSTEM
+
     # Combine name, description, and full instructions into one system message
     # so the model always sees who it is and its purpose (Swarms may not send
     # agent_name/agent_description to the LLM).
     full_system_prompt = build_agent_system_prompt(
-        name=agent_name,
-        description=CLAWSWARM_AGENT_DESCRIPTION,
+        name=configured_name,
+        description=configured_description,
         system_prompt=base_system,
     )
 
-    model_name = (
-        os.environ.get("AGENT_MODEL", "gpt-4o-mini").strip()
-        or "gpt-4o-mini"
-    )
+    if config and config.model:
+        default_model = config.model
+    else:
+        default_model = "gpt-4o-mini"
+    model_name = os.environ.get("AGENT_MODEL", default_model).strip()
+    if not model_name:
+        model_name = default_model
 
-    return Agent(
-        agent_name=agent_name,
-        agent_description=CLAWSWARM_AGENT_DESCRIPTION,
-        system_prompt=full_system_prompt,
-        model_name=model_name,
-        max_loops=1,
-        output_type="final",
-        tools=[launch_token, claim_fees],
-    )
+    agent_kwargs = {
+        "agent_name": configured_name,
+        "agent_description": configured_description,
+        "system_prompt": full_system_prompt,
+        "model_name": model_name,
+        "max_loops": 1,
+        "output_type": "final",
+        "tools": [launch_token, claim_fees, call_claude, web_search],
+    }
+    if config and config.max_tokens is not None:
+        agent_kwargs["max_tokens"] = config.max_tokens
+    if config and config.temperature is not None:
+        agent_kwargs["temperature"] = config.temperature
+
+    return Agent(**agent_kwargs)

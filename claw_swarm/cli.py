@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import os
+from pathlib import Path
 import subprocess
 import sys
 import time
@@ -67,6 +68,8 @@ def cmd_run(_args: argparse.Namespace) -> int:
         to start or the agent errors.
     """
     _ensure_dotenv()
+    if _args.config:
+        os.environ["CLAWSWARM_CONFIG"] = _args.config
     host = os.environ.get("GATEWAY_HOST", "[::]")
     port = int(os.environ.get("GATEWAY_PORT", "50051"))
     env = os.environ.copy()
@@ -142,6 +145,95 @@ def cmd_settings(_args: argparse.Namespace) -> int:
     return 0
 
 
+def _prompt_text(prompt: str, default: str = "") -> str:
+    raw = input(prompt).strip()
+    return raw if raw else default
+
+
+def _upsert_env_file(path: Path, values: dict[str, str]) -> None:
+    existing_lines: list[str] = []
+    if path.is_file():
+        existing_lines = path.read_text().splitlines()
+
+    updated: dict[str, str] = {}
+    for line in existing_lines:
+        if "=" not in line or line.strip().startswith("#"):
+            continue
+        key, val = line.split("=", 1)
+        updated[key.strip()] = val.strip()
+
+    updated.update(values)
+
+    out_lines = [f"{key}={value}" for key, value in sorted(updated.items())]
+    path.write_text("\n".join(out_lines) + "\n")
+
+
+def cmd_init(_args: argparse.Namespace) -> int:
+    """Interactive onboarding flow for first-time setup."""
+    _ensure_dotenv()
+    print("Welcome to ClawSwarm!")
+    print("Let's get you set up.\n")
+
+    name = _prompt_text("Agent Name [ClawSwarm]: ", "ClawSwarm")
+    description = _prompt_text("Agent Description: ", "")
+
+    models = [
+        "gpt-4o",
+        "gpt-4o-mini",
+        "claude-3-5-sonnet-20241022",
+        "claude-3-opus-20240229",
+        "Other",
+    ]
+    print("\nSelect Model:")
+    for i, model in enumerate(models, start=1):
+        suffix = " (default)" if model == "gpt-4o-mini" else ""
+        print(f"  {i}. {model}{suffix}")
+    choice = _prompt_text("Choice [2]: ", "2")
+    model = "gpt-4o-mini"
+    if choice in {"1", "2", "3", "4"}:
+        model = models[int(choice) - 1]
+    elif choice == "5":
+        model = _prompt_text("Custom model id: ", "gpt-4o-mini")
+
+    print("\nChecking environment variables...")
+    required = ["OPENAI_API_KEY"]
+    optional = [
+        "ANTHROPIC_API_KEY",
+        "TELEGRAM_BOT_TOKEN",
+        "DISCORD_BOT_TOKEN",
+        "WHATSAPP_ACCESS_TOKEN",
+    ]
+    gateway = ["GATEWAY_HOST", "GATEWAY_PORT"]
+
+    for key in required:
+        status = "Set" if os.environ.get(key) else "Not set"
+        mark = "✓" if status == "Set" else "✗"
+        print(f"{mark} {key}: {status}")
+    for key in optional:
+        status = "Set" if os.environ.get(key) else "Not set (optional)"
+        mark = "✓" if "Set" in status and "optional" not in status else "✗"
+        print(f"{mark} {key}: {status}")
+    for key in gateway:
+        val = os.environ.get(
+            key, "[::]" if key == "GATEWAY_HOST" else "50051"
+        )
+        print(f"✓ {key}: Set to {val}")
+
+    env_values = {
+        "AGENT_NAME": name,
+        "AGENT_DESCRIPTION": description,
+        "AGENT_MODEL": model,
+        "GATEWAY_HOST": os.environ.get("GATEWAY_HOST", "[::]"),
+        "GATEWAY_PORT": os.environ.get("GATEWAY_PORT", "50051"),
+    }
+
+    env_path = Path(os.getcwd()) / ".env"
+    _upsert_env_file(env_path, env_values)
+    print("\nConfiguration saved to .env")
+    print("Setup complete! Run 'clawswarm run' to start your agent.")
+    return 0
+
+
 def main() -> int:
     """
     CLI entry point: parse subcommand and dispatch.
@@ -161,12 +253,24 @@ def main() -> int:
     run_p = subparsers.add_parser(
         "run", help="Run gateway and agent (gateway in subprocess)"
     )
+    run_p.add_argument(
+        "--config",
+        default=None,
+        help="Path to optional ClawSwarm TOML config file",
+    )
     run_p.set_defaults(func=cmd_run)
 
     set_p = subparsers.add_parser(
         "settings", help="Show current settings (env / .env)"
     )
     set_p.set_defaults(func=cmd_settings)
+
+    init_p = subparsers.add_parser(
+        "init",
+        aliases=["onboard"],
+        help="Run interactive first-time setup",
+    )
+    init_p.set_defaults(func=cmd_init)
 
     args = parser.parse_args()
     if not args.command:

@@ -137,6 +137,20 @@ Set these in your shell or in a `.env` file (e.g. `--env-file .env` with Docker)
 
 **1. Set environment variables** for the channels you use (see **Environment variables** above for the full table).
 
+**Optional first-time onboarding**
+
+```bash
+clawswarm init
+```
+
+Alias:
+
+```bash
+clawswarm onboard
+```
+
+This writes `AGENT_NAME`, `AGENT_DESCRIPTION`, `AGENT_MODEL`, and gateway defaults to `.env`.
+
 **2. Run the full stack** (gateway + agent in one process group):
 
 ```bash
@@ -166,6 +180,27 @@ Pass channel tokens and `AGENT_MODEL` via `--env-file .env` or `-e`.
 ## Configuration
 
 See the **Environment variables** table above for the full list. The gateway and agent both read `GATEWAY_HOST` and `GATEWAY_PORT` (gateway binds on that address; agent connects to it). Replies use the same platform tokens as the gateway.
+
+Optional TOML config file support is available for agent fields (`name`, `description`, `system_prompt`, `model`, `max_tokens`, `temperature`).
+
+Resolution order:
+
+1. `--config /path/to/claw_swarm.toml` on `clawswarm run`
+2. `CLAWSWARM_CONFIG` environment variable
+3. `./claw_swarm.toml`
+4. `~/.claw_swarm/config.toml`
+
+Example:
+
+```toml
+[agent]
+name = "ResearchAgent"
+description = "Handles research and synthesis"
+system_prompt = "You are a research-focused ClawSwarm agent."
+model = "gpt-4o-mini"
+max_tokens = 4096
+temperature = 0.2
+```
 
 
 ---

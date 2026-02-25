@@ -34,7 +34,7 @@ You have two tools. Use them whenever they would clearly help the user.
 """
 
 CLAWSWARM_AGENT_DESCRIPTION = (
-    "Enterprise-grade agent that responds on Telegram, Discord, and WhatsApp; "
+    "ClawSwarm enterprise-grade agent that responds on Telegram, Discord, and WhatsApp; "
     "uses Claude as a tool for deep reasoning and code."
 )
 

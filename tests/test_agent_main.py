@@ -129,3 +129,27 @@ class TestCreateAgent:
                 agent_main.create_agent()
         call_kw = mock_agent.call_args[1]
         assert call_kw["model_name"] == "gpt-4o-mini"
+
+    def test_uses_config_values(self, tmp_path):
+        cfg = tmp_path / "claw_swarm.toml"
+        cfg.write_text(
+            """
+[agent]
+name = "CfgBot"
+description = "Cfg desc"
+system_prompt = "Cfg prompt"
+model = "gpt-4o"
+max_tokens = 2048
+temperature = 0.1
+""".strip()
+        )
+        with patch("claw_swarm.agent.main.Agent") as mock_agent:
+            with patch.dict(os.environ, {}, clear=True):
+                agent_main.create_agent(config_path=str(cfg))
+        call_kw = mock_agent.call_args[1]
+        assert call_kw["agent_name"] == "CfgBot"
+        assert call_kw["agent_description"] == "Cfg desc"
+        assert "Cfg prompt" in call_kw["system_prompt"]
+        assert call_kw["model_name"] == "gpt-4o"
+        assert call_kw["max_tokens"] == 2048
+        assert call_kw["temperature"] == 0.1

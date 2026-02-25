@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import grpc
 import os
+import re
 import signal
 import sys
 from typing import Callable, Optional
@@ -37,7 +38,7 @@ def _extract_final_reply(
     to Telegram/Discord/WhatsApp.
     """
     if not raw_output or not raw_output.strip():
-        return raw_output or ""
+        return ""
     text = raw_output.strip()
     marker = "[Current message to answer]"
     if marker in text:
@@ -68,6 +69,10 @@ def _extract_final_reply(
             reply = text[idx + len(label) :].strip()
             if reply:
                 return reply
+
+    quoted_matches = re.findall(r'[“"]([^"\n]{3,500})[”"]', text)
+    quoted_reply = quoted_matches[-1].strip() if quoted_matches else ""
+
     # Fallback: last contiguous block of content (skip trailing context headers)
     lines = [ln.strip() for ln in text.split("\n")]
     i = len(lines) - 1
@@ -84,7 +89,18 @@ def _extract_final_reply(
         )
     ):
         j -= 1
-    return "\n".join(lines[j + 1 : i + 1]).strip() or text
+    fallback = "\n".join(lines[j + 1 : i + 1]).strip() or text
+    lower_fallback = fallback.lower()
+    looks_like_runner_summary = (
+        "loop" in lower_fallback
+        and "completed" in lower_fallback
+        and "director" in lower_fallback
+    )
+    if looks_like_runner_summary and quoted_reply:
+        return quoted_reply
+    if "content: none" in text.lower() and quoted_reply:
+        return quoted_reply
+    return fallback
 
 
 def _get_gateway_target() -> str:
@@ -145,15 +161,17 @@ async def _process_message(
     )
     # Send back to the same channel/thread
     ok, err = await send_message_async(
-        platform=msg.platform,
-        channel_id=msg.channel_id,
-        thread_id=msg.thread_id or "",
-        text=reply_text,
+        msg.platform,
+        msg.channel_id,
+        msg.thread_id or "",
+        reply_text,
     )
     if not ok:
         print(f"[agent] Failed to send reply: {err}", file=sys.stderr)
     if on_reply:
-        on_reply(msg, reply_text)
+        callback_result = on_reply(msg, reply_text)
+        if asyncio.iscoroutine(callback_result):
+            await callback_result
 
 
 async def run_agent_loop(

@@ -117,7 +117,11 @@ def launch_token(
             },
             json=payload,
         )
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except RuntimeError:
+            if response.status_code >= 400:
+                raise
         return json.dumps(response.json())
 
 
@@ -158,5 +162,9 @@ def claim_fees(
             headers={"Content-Type": "application/json"},
             json=payload,
         )
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except RuntimeError:
+            if response.status_code >= 400:
+                raise
         return json.dumps(response.json())
