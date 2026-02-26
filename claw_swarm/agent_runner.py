@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import grpc
 import os
+import re
 import signal
 import sys
 from typing import Callable, Optional
@@ -24,6 +25,38 @@ from claw_swarm.gateway.proto import (
 from claw_swarm.gateway.schema import UnifiedMessage
 from claw_swarm.agent.memory import append_interaction, read_memory
 from claw_swarm.replier import send_message_async
+
+
+_SWARM_META_PATTERNS = [
+    re.compile(r"^Loop\s+\d+\s+of\s+\d+\s+has\s+been\s+completed", re.I),
+    re.compile(r"Director.?s supervision", re.I),
+    re.compile(r"parse_orders", re.I),
+]
+
+_QUOTED_REPLY_PATTERN = re.compile(r"[\"“](.*?)[\"”]", re.S)
+
+
+def _is_swarm_meta_message(text: str) -> bool:
+    if not text:
+        return False
+    candidate = text.strip()
+    return any(p.search(candidate) for p in _SWARM_META_PATTERNS)
+
+
+def _recover_user_reply_from_raw(raw_output: str) -> str:
+    if not raw_output:
+        return ""
+
+    for match in _QUOTED_REPLY_PATTERN.finditer(raw_output):
+        quoted = match.group(1).strip()
+        if not quoted:
+            continue
+        if _is_swarm_meta_message(quoted):
+            continue
+        if len(quoted.split()) < 2:
+            continue
+        return quoted
+    return ""
 
 
 def _extract_final_reply(
@@ -126,12 +159,21 @@ async def _process_message(
             agent.run, task_with_context
         )
         raw_str = str(raw_output).strip() if raw_output else ""
-        # Summarize swarm output for Telegram (concise, no emojis)
-        reply_text = await asyncio.to_thread(
-            summarize_for_telegram, raw_str
-        )
-        if not reply_text:
-            reply_text = _extract_final_reply(raw_str, task)
+
+        extracted = _extract_final_reply(raw_str, task)
+        if _is_swarm_meta_message(extracted):
+            extracted = _recover_user_reply_from_raw(raw_str)
+
+        if extracted and not _is_swarm_meta_message(extracted):
+            reply_text = extracted
+        else:
+            # Summarize swarm output for Telegram (concise, no emojis)
+            reply_text = await asyncio.to_thread(
+                summarize_for_telegram, raw_str
+            )
+            if _is_swarm_meta_message(reply_text):
+                reply_text = _recover_user_reply_from_raw(raw_str)
+
         if not reply_text:
             reply_text = (
                 "I'm sorry, I couldn't generate a reply for that."
