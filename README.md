@@ -91,13 +91,19 @@ Set these in your shell or in a `.env` file (e.g. `--env-file .env` with Docker)
 pip install -U claw-swarm
 ```
 
-**2. Create your config** — run the interactive wizard to generate `claw_config.yaml`:
+**2. Run first-time setup** — create `claw_config.yaml`, bootstrap `.env`, and validate environment variables:
+
+```bash
+clawswarm init
+```
+
+Press **Enter** to accept defaults. This writes `claw_config.yaml` to your project root with gateway host/port/TLS, HTTP API port/key, agent name, worker model, and verbose mode. It also creates `.env` from `.env.example` when missing and prints required/optional key status.
+
+You can still run the legacy config-only flow with:
 
 ```bash
 clawswarm onboarding
 ```
-
-Press **Enter** to accept defaults. This writes `claw_config.yaml` to your project root with gateway host/port/TLS, HTTP API port/key, agent name, worker model, and verbose mode.
 
 **3. Set secrets** — copy `.env.example` to `.env` and fill in your credentials:
 

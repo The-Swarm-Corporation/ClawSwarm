@@ -60,7 +60,7 @@ class TestCmdSettings:
         out, _ = capsys.readouterr()
         assert "GATEWAY_HOST" in out
         assert "GATEWAY_PORT" in out
-        assert "ClawSwarm" in out
+        assert "Gateway" in out
 
     def test_masks_secret_values(self, capsys):
         with patch.dict(
@@ -111,3 +111,35 @@ class TestMain:
                 code = cli.main()
         assert code == 7
         m.assert_called_once()
+
+    def test_init_subcommand_calls_cmd_init(self):
+        with patch.object(sys, "argv", ["clawswarm", "init"]):
+            with patch(
+                "claw_swarm.cli.cmd_init", return_value=5
+            ) as m:
+                code = cli.main()
+        assert code == 5
+        m.assert_called_once()
+
+    def test_onboard_alias_calls_cmd_init(self):
+        with patch.object(sys, "argv", ["clawswarm", "onboard"]):
+            with patch(
+                "claw_swarm.cli.cmd_init", return_value=9
+            ) as m:
+                code = cli.main()
+        assert code == 9
+        m.assert_called_once()
+
+
+class TestInitHelpers:
+    def test_bootstrap_env_file_creates_from_template(
+        self, tmp_path, monkeypatch
+    ):
+        (tmp_path / "pyproject.toml").write_text("[tool.poetry]\n")
+        (tmp_path / ".env.example").write_text("OPENAI_API_KEY=\n")
+        monkeypatch.chdir(tmp_path)
+
+        env_path = cli._bootstrap_env_file()
+        assert env_path.endswith(".env")
+        assert (tmp_path / ".env").is_file()
+        assert "OPENAI_API_KEY" in (tmp_path / ".env").read_text()
