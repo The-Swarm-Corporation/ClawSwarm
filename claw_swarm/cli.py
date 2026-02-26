@@ -9,6 +9,7 @@ Usage:
   clawswarm run --gw-tls               # enable gateway TLS
   clawswarm run --api-key secret       # lock API with a key
   clawswarm settings                   # show live config
+    clawswarm init                       # onboarding + .env bootstrap
   clawswarm onboarding                 # create claw_config.yaml
   clawswarm onboarding --force         # overwrite existing config
 """
@@ -17,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -268,6 +270,102 @@ def cmd_onboarding(args: argparse.Namespace) -> int:
     return 0
 
 
+def _bootstrap_env_file() -> str:
+    """
+    Ensure a .env file exists in the project root.
+
+    If missing, copy from .env.example when available.
+    Returns the path to the .env file.
+    """
+    cwd = os.path.abspath(os.getcwd())
+    for _ in range(10):
+        pyproject = os.path.join(cwd, "pyproject.toml")
+        if os.path.isfile(pyproject):
+            env_path = os.path.join(cwd, ".env")
+            if os.path.isfile(env_path):
+                return env_path
+            template = os.path.join(cwd, ".env.example")
+            if os.path.isfile(template):
+                shutil.copyfile(template, env_path)
+            else:
+                with open(env_path, "w", encoding="utf-8"):
+                    pass
+            return env_path
+        parent = os.path.dirname(cwd)
+        if parent == cwd:
+            break
+        cwd = parent
+
+    env_path = os.path.abspath(".env")
+    if not os.path.isfile(env_path):
+        with open(env_path, "w", encoding="utf-8"):
+            pass
+    return env_path
+
+
+def _print_init_env_status() -> None:
+    keys = [
+        ("OPENAI_API_KEY", True),
+        ("ANTHROPIC_API_KEY", False),
+        ("TELEGRAM_BOT_TOKEN", False),
+        ("DISCORD_BOT_TOKEN", False),
+        ("WHATSAPP_ACCESS_TOKEN", False),
+        ("GATEWAY_HOST", False),
+        ("GATEWAY_PORT", False),
+    ]
+
+    table = Table(
+        box=box.ROUNDED,
+        border_style="cyan",
+        show_header=True,
+        padding=(0, 1),
+    )
+    table.add_column("Variable", style="bold")
+    table.add_column("Status", style="cyan")
+    table.add_column("Required", style="dim")
+
+    for key, required in keys:
+        val = os.environ.get(key, "").strip()
+        status = (
+            f"[green]Set[/green] ({val[:8]}...)"
+            if val and (key.endswith("_KEY") or key.endswith("_TOKEN"))
+            else (
+                f"[green]Set[/green] ({val})"
+                if val
+                else "[yellow]Not set[/yellow]"
+            )
+        )
+        req = "yes" if required else "optional"
+        table.add_row(key, status, req)
+
+    _console.print(
+        Panel(
+            table,
+            title="[bold cyan]Environment Check[/bold cyan]",
+            border_style="cyan",
+            padding=(0, 1),
+        )
+    )
+
+
+def cmd_init(args: argparse.Namespace) -> int:
+    """
+    First-time setup command:
+    1) create/update claw_config.yaml via onboarding,
+    2) ensure .env exists,
+    3) print env status for required/optional keys.
+    """
+    _ensure_dotenv()
+    onboarding_interactive(force=bool(args.force))
+    env_path = _bootstrap_env_file()
+    _ensure_dotenv()
+    _console.print(
+        f"[green]✓[/green] Environment file ready at [cyan]{env_path}[/cyan]"
+    )
+    _print_init_env_status()
+    return 0
+
+
 def main() -> int:
     """
     CLI entry point: parse subcommand and dispatch.
@@ -286,6 +384,8 @@ def main() -> int:
             "Telegram, Discord, WhatsApp, and HTTP.\n"
             "\n"
             "Quick start:\n"
+            "  clawswarm init                   "
+            "# onboarding + .env bootstrap\n"
             "  clawswarm onboarding             "
             "# create claw_config.yaml\n"
             "  clawswarm run                    "
@@ -462,6 +562,28 @@ def main() -> int:
         help="Overwrite claw_config.yaml if it already exists",
     )
     on_p.set_defaults(func=cmd_onboarding)
+
+    # ── init / onboard ───────────────────────────────────────────────────
+    init_p = subparsers.add_parser(
+        "init",
+        aliases=["onboard"],
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        help="First-time setup (onboarding + .env checks)",
+        description=(
+            "Run first-time setup with interactive onboarding and\n"
+            ".env bootstrapping. This command:\n"
+            "  1) creates/updates claw_config.yaml\n"
+            "  2) creates .env from .env.example if missing\n"
+            "  3) displays required/optional env variable status\n"
+        ),
+    )
+    init_p.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="Overwrite claw_config.yaml if it already exists",
+    )
+    init_p.set_defaults(func=cmd_init)
 
     args = parser.parse_args()
     if not args.command:
