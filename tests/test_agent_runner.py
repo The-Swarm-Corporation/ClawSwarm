@@ -13,7 +13,9 @@ import pytest
 from claw_swarm.agent_runner import (
     _extract_final_reply,
     _get_gateway_target,
+    _is_swarm_meta_message,
     _process_message,
+    _recover_user_reply_from_raw,
     run_agent_loop,
 )
 from claw_swarm.gateway.schema import Platform, UnifiedMessage
@@ -67,6 +69,22 @@ class TestExtractFinalReply:
         raw = "Answer: 42\n\n[Some context header]"
         result = _extract_final_reply(raw, "?")
         assert "42" in result
+
+
+class TestRunnerMetaRecovery:
+    def test_meta_message_detection(self):
+        assert _is_swarm_meta_message(
+            "Loop 1 of 1 has been completed by ClawSwarm under the Director's supervision."
+        )
+        assert not _is_swarm_meta_message("Hello! I'm ClawSwarm.")
+
+    def test_recover_user_reply_from_quotes(self):
+        raw = (
+            "Director produced a real reply (\"Hello! I'm ClawSwarm. How can I assist you today?\") "
+            "but parse_orders failed."
+        )
+        out = _recover_user_reply_from_raw(raw)
+        assert out == "Hello! I'm ClawSwarm. How can I assist you today?"
 
 
 class TestGetGatewayTarget:
@@ -156,10 +174,10 @@ class TestProcessMessage:
                         await _process_message(msg, agent)
         to_thread.assert_called_once()
         send_mock.assert_called_once()
-        args = send_mock.call_args[0]
-        assert args[0] == Platform.TELEGRAM
-        assert args[1] == "ch1"
-        assert "Hi there" in args[3]
+        kwargs = send_mock.call_args.kwargs
+        assert kwargs["platform"] == Platform.TELEGRAM
+        assert kwargs["channel_id"] == "ch1"
+        assert "Hi there" in kwargs["text"]
 
     @pytest.mark.asyncio
     async def test_on_reply_callback_invoked(self):
@@ -195,6 +213,43 @@ class TestProcessMessage:
         on_reply.assert_called_once()
         assert on_reply.call_args[0][0] == msg
         assert "Reply" in on_reply.call_args[0][1]
+
+    @pytest.mark.asyncio
+    async def test_avoids_sending_swarm_loop_meta_message(self):
+        msg = UnifiedMessage(
+            id="m2",
+            platform=Platform.TELEGRAM,
+            channel_id="ch2",
+            sender_id="s2",
+            text="hello",
+        )
+        agent = MagicMock()
+        raw = (
+            "Loop 1 of 1 has been completed by ClawSwarm under the Director's supervision. "
+            "Director produced a real reply (\"Hello! I'm ClawSwarm. How can I assist you today?\")."
+        )
+
+        send_mock = AsyncMock(return_value=(True, ""))
+        with patch(
+            "claw_swarm.agent_runner.asyncio.to_thread",
+            new_callable=AsyncMock,
+            return_value=raw,
+        ):
+            with patch(
+                "claw_swarm.agent_runner.send_message_async", send_mock
+            ):
+                with patch(
+                    "claw_swarm.agent_runner.append_interaction"
+                ):
+                    with patch(
+                        "claw_swarm.agent_runner.read_memory",
+                        return_value="",
+                    ):
+                        await _process_message(msg, agent)
+
+        sent_text = send_mock.call_args.kwargs["text"]
+        assert "Director's supervision" not in sent_text
+        assert "Hello! I'm ClawSwarm" in sent_text
 
 
 class TestRunAgentLoop:
