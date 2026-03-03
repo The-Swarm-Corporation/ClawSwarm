@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "claw-swarm"
-version = "0.0.8"
+version = "0.0.9"
 description = "A lightweight multi-agent version of OpenClaw built on the Swarms framework. One API, unified messaging across Telegram, Discord, and WhatsApp with optional Claude-powered reasoning."
 license = "Apache-2.0"
 authors = ["The-Swarm-Corporation"]

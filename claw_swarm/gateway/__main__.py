@@ -8,6 +8,10 @@ import asyncio
 import os
 import time
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import grpc
 from rich.console import Console
 from rich.panel import Panel
