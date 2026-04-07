@@ -251,6 +251,52 @@ flowchart LR
 
 ---
 
+## Running with a Local Model
+
+ClawSwarm supports local models via **vLLM** (GPU) or **HuggingFace Transformers** (CPU/GPU) as drop-in replacements for any cloud model.
+
+**vLLM (recommended for GPU):**
+
+e```bash
+pip install claw-swarm[vllm]
+clawswarm run --model vllm/mistralai/Mistral-7B-Instruct-v0.1
+```
+
+**vLLM server** — start the server separately, then point ClawSwarm at it:
+
+```bash
+python -m vllm.entrypoints.openai.api_server \
+    --model mistralai/Mistral-7B-Instruct-v0.1
+
+clawswarm run --model vllm-server/mistralai/Mistral-7B-Instruct-v0.1
+```
+
+**HuggingFace Transformers (CPU-friendly):**
+
+```bash
+pip install claw-swarm[hf]
+clawswarm run --model hf/microsoft/phi-2
+```
+
+Use different models for the director and workers:
+
+```bash
+clawswarm run \
+  --model vllm/mistralai/Mistral-7B-Instruct-v0.1 \
+  --worker-model hf/microsoft/phi-2
+```
+
+Or set via environment variables (useful for Docker/Railway):
+
+```
+AGENT_MODEL=vllm/mistralai/Mistral-7B-Instruct-v0.1
+WORKER_MODEL_NAME=hf/microsoft/phi-2
+```
+
+Supported prefixes: `vllm/<model>`, `vllm-server/<model>`, `hf/<model>`. Any spec without a prefix is treated as a cloud model name (existing behaviour).
+
+---
+
 ## Docs
 
 - [Configuration & CLI Reference](docs/cli_config.md) — `claw_config.yaml` schema, config precedence, all CLI flags, production examples, and troubleshooting

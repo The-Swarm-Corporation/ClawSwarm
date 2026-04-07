@@ -35,7 +35,7 @@ from __future__ import annotations
 from swarms import Agent
 
 from claw_swarm.agent.prompts import build_agent_system_prompt
-from claw_swarm.agent.model_config import resolve_model
+from claw_swarm.agent.model_config import resolve_llm
 from claw_swarm.tools.claude_code_tool import run_claude_agent
 from claw_swarm.tools.launch_tokens import claim_fees, launch_token
 
@@ -249,12 +249,12 @@ def create_response_agent(
         description=RESPONSE_AGENT_DESCRIPTION,
         system_prompt=prompt,
     )
-    model = resolve_model(model_name, default="gpt-4o-mini")
+    cloud_model, llm = resolve_llm(model_name, default="gpt-4o-mini")
     return Agent(
         agent_name=agent_name,
         agent_description=RESPONSE_AGENT_DESCRIPTION,
         system_prompt=full_system,
-        model_name=model,
+        **({"llm": llm} if llm else {"model_name": cloud_model}),
         max_loops=1,
         output_type="final",
     )
@@ -290,12 +290,12 @@ def create_search_agent(
         description=SEARCH_AGENT_DESCRIPTION,
         system_prompt=prompt,
     )
-    model = resolve_model(model_name, default="gpt-4o-mini")
+    cloud_model, llm = resolve_llm(model_name, default="gpt-4o-mini")
     return Agent(
         agent_name=agent_name,
         agent_description=SEARCH_AGENT_DESCRIPTION,
         system_prompt=full_system,
-        model_name=model,
+        **({"llm": llm} if llm else {"model_name": cloud_model}),
         tools=[exa_search, scrape_url, scrape_urls],
         max_loops=1,
         output_type="final",
@@ -332,12 +332,12 @@ def create_token_launch_agent(
         description=TOKEN_LAUNCH_AGENT_DESCRIPTION,
         system_prompt=prompt,
     )
-    model = resolve_model(model_name, default="gpt-4o-mini")
+    cloud_model, llm = resolve_llm(model_name, default="gpt-4o-mini")
     return Agent(
         agent_name=agent_name,
         agent_description=TOKEN_LAUNCH_AGENT_DESCRIPTION,
         system_prompt=full_system,
-        model_name=model,
+        **({"llm": llm} if llm else {"model_name": cloud_model}),
         tools=[launch_token, claim_fees],
         max_loops=1,
         output_type="final",
@@ -375,12 +375,12 @@ def create_developer_agent(
         description=DEVELOPER_AGENT_DESCRIPTION,
         system_prompt=prompt,
     )
-    model = resolve_model(model_name, default="gpt-4o-mini")
+    cloud_model, llm = resolve_llm(model_name, default="gpt-4o-mini")
     return Agent(
         agent_name=agent_name,
         agent_description=DEVELOPER_AGENT_DESCRIPTION,
         system_prompt=full_system,
-        model_name=model,
+        **({"llm": llm} if llm else {"model_name": cloud_model}),
         tools=[_run_claude_developer],
         max_loops=1,
         output_type="final",

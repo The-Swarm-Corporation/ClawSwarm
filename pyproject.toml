@@ -56,6 +56,15 @@ loguru = "*"
 rich = "*"
 fastapi = "*"
 uvicorn = {extras = ["standard"], version = "*"}
+# Local LLM backends (optional — install only what you need)
+vllm = {version = "*", optional = true}
+transformers = {version = "*", optional = true}
+accelerate = {version = "*", optional = true}
+
+[tool.poetry.extras]
+vllm = ["vllm"]
+hf = ["transformers", "accelerate"]
+local = ["vllm", "transformers", "accelerate"]
 
 [tool.poetry.scripts]
 clawswarm = "claw_swarm.cli:main"

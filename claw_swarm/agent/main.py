@@ -13,7 +13,7 @@ from claw_swarm.agent.prompts import (
     build_director_system_prompt,
 )
 from claw_swarm.tools import run_claude_agent
-from claw_swarm.agent.model_config import resolve_model
+from claw_swarm.agent.model_config import resolve_llm, resolve_model
 from claw_swarm.agent.worker_agents import (
     create_developer_agent,
     create_response_agent,
@@ -21,12 +21,26 @@ from claw_swarm.agent.worker_agents import (
     create_token_launch_agent,
 )
 
-WORKER_AGENTS = [
-    create_response_agent(),
-    create_developer_agent(),
-    create_search_agent(),
-    create_token_launch_agent(),
-]
+def _build_worker_agents(worker_model: str | None = None) -> list:
+    """
+    Create the four ClawSwarm worker agents.
+
+    Args:
+        worker_model: Optional model spec for workers. Supports cloud model
+            names (``"gpt-4o-mini"``), or local prefixes
+            (``"vllm/<model>"``, ``"hf/<model>"``).  When None the
+            WORKER_MODEL_NAME / AGENT_MODEL env vars are used, then the
+            built-in default.
+
+    Returns:
+        List of four worker Agent instances.
+    """
+    return [
+        create_response_agent(model_name=worker_model),
+        create_developer_agent(model_name=worker_model),
+        create_search_agent(model_name=worker_model),
+        create_token_launch_agent(model_name=worker_model),
+    ]
 
 
 def call_claude(task: str) -> str:
@@ -73,6 +87,8 @@ def create_agent(
     agent_name: str | None = None,
     system_prompt: str | None = None,
     description: str | None = None,
+    director_model: str | None = None,
+    worker_model: str | None = None,
 ) -> HierarchicalSwarm:
     """
     Create the ClawSwarm hierarchical swarm: a director agent plus worker agents
@@ -82,14 +98,46 @@ def create_agent(
     The director uses the ClawSwarm system prompt and the swarm's built-in
     director (SwarmSpec output) so plan/orders are parsed correctly.
 
+    Model selection (director and workers are configured independently):
+
+    *Cloud models (default):*
+    Pass any OpenAI / Anthropic model name, e.g. ``"gpt-4o-mini"`` or set the
+    ``AGENT_MODEL`` / ``WORKER_MODEL_NAME`` environment variables.
+
+    *Local models via vLLM:*
+    Use the ``vllm/<model>`` prefix — requires ``pip install vllm`` and a GPU::
+
+        create_agent(director_model="vllm/mistralai/Mistral-7B-Instruct-v0.1")
+
+    Or connect to a running vLLM HTTP server::
+
+        create_agent(director_model="vllm-server/meta-llama/Llama-2-7b-chat-hf")
+
+    *Local models via HuggingFace Transformers:*
+    Use the ``hf/<model>`` prefix — requires ``pip install transformers accelerate``::
+
+        create_agent(
+            director_model="hf/microsoft/phi-2",
+            worker_model="hf/microsoft/phi-2",
+        )
+
+    These prefixes can also be set via environment variables::
+
+        AGENT_MODEL=vllm/mistralai/Mistral-7B-Instruct-v0.1
+        WORKER_MODEL_NAME=hf/microsoft/phi-2
+
     Args:
-        agent_name (str): Name for the swarm and director (shown in logs/UI).
-        system_prompt (str | None): If provided, overrides the default ClawSwarm
-            prompt for the director (see `claw_swarm.prompts`).
+        agent_name:     Name for the swarm and director (shown in logs/UI).
+        system_prompt:  Override the default ClawSwarm prompt for the director.
+        description:    Override the default swarm description.
+        director_model: Model spec for the director agent. Supports cloud names
+            or local prefixes (``vllm/``, ``vllm-server/``, ``hf/``).
+            Falls back to AGENT_MODEL env var, then ``"gpt-4o-mini"``.
+        worker_model:   Model spec for worker agents. Falls back to
+            WORKER_MODEL_NAME env var, AGENT_MODEL, then ``"gpt-4o-mini"``.
 
     Returns:
-        HierarchicalSwarm: Swarm ready for `.run(task)` calls. The director
-            delegates to worker agents (search, token launch, developer).
+        HierarchicalSwarm: Swarm ready for `.run(task)` calls.
 
     Example:
         >>> swarm = create_agent()
@@ -100,20 +148,48 @@ def create_agent(
     name = agent_name or _agent_name()
     desc = description or _agent_description()
 
-    director_model = (
-        os.environ.get("AGENT_MODEL", "").strip() or "gpt-4o-mini"
-    )
-
     director_system_prompt = build_director_system_prompt(
         agent_name=name,
         system_prompt=system_prompt,
     )
+
+    workers = _build_worker_agents(worker_model)
+
+    # Resolve director model — may be a cloud name string or a local wrapper
+    director_spec = (
+        director_model
+        or os.environ.get("AGENT_MODEL", "").strip()
+        or "gpt-4o-mini"
+    )
+    cloud_model, llm_obj = resolve_llm(director_spec, default="gpt-4o-mini")
+
+    if llm_obj is not None:
+        # Local model: build a director Agent with the custom llm wrapper and
+        # pass it directly to HierarchicalSwarm so it is used as-is.
+        director_agent = Agent(
+            agent_name=name,
+            agent_description=desc,
+            system_prompt=director_system_prompt,
+            llm=llm_obj,
+            max_loops=1,
+        )
+        return HierarchicalSwarm(
+            name=name,
+            description=desc,
+            agents=workers,
+            director_name=name,
+            director_system_prompt=director_system_prompt,
+            director_feedback_on=False,
+            director=director_agent,
+        )
+
+    # Cloud model: pass the model name string directly (existing behaviour).
     return HierarchicalSwarm(
         name=name,
         description=desc,
-        agents=WORKER_AGENTS,
+        agents=workers,
         director_name=name,
-        director_model_name=director_model,
+        director_model_name=cloud_model,
         director_system_prompt=director_system_prompt,
         director_feedback_on=False,
         director=None,

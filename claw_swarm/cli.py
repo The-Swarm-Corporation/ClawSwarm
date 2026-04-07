@@ -127,6 +127,11 @@ def cmd_run(args: argparse.Namespace) -> int:
     # --port always wins over API_PORT from config
     if args.port != 8080 or not os.environ.get("API_PORT"):
         os.environ["API_PORT"] = str(args.port)
+    # Model overrides — write to env so agent_runner picks them up
+    if args.model:
+        os.environ["AGENT_MODEL"] = args.model
+    if args.worker_model:
+        os.environ["WORKER_MODEL_NAME"] = args.worker_model
 
     gw_host = os.environ.get("GATEWAY_HOST", "[::]")
     gw_port = int(os.environ.get("GATEWAY_PORT", "50051"))
@@ -569,17 +574,19 @@ def main() -> int:
             "Quick start:\n"
             "  clawswarm onboarding             "
             "# create claw_config.yaml\n"
-            "  clawswarm run                    "
-            "# gateway + agent\n"
-            "  clawswarm run --api              "
+            "  clawswarm run                              "
+            "# gateway + agent (cloud model)\n"
+            "  clawswarm run --model vllm/Qwen/Qwen-7B-Chat "
+            "# local vLLM model\n"
+            "  clawswarm run --model hf/microsoft/phi-2   "
+            "# local HuggingFace model\n"
+            "  clawswarm run --api                        "
             "# + REST API on :8080\n"
-            "  clawswarm run --api --port 9000  "
-            "# custom API port\n"
-            "  clawswarm settings               "
+            "  clawswarm settings                         "
             "# show live config\n"
-            "  clawswarm logs                   "
+            "  clawswarm logs                             "
             "# dump message logs to file\n"
-            "  clawswarm stats                  "
+            "  clawswarm stats                            "
             "# show message statistics\n"
         ),
         epilog=(
@@ -692,6 +699,36 @@ def main() -> int:
         help=(
             "Require X-API-Key: <KEY> on all /v1/* requests. "
             "Overrides api.key in claw_config.yaml and API_KEY env var."
+        ),
+    )
+    run_p.add_argument(
+        "--model",
+        metavar="MODEL",
+        default=None,
+        help=(
+            "Director (main) agent model. Accepts cloud model names "
+            "(e.g. gpt-4o-mini) or local prefixes:\n"
+            "  vllm/<model>          local vLLM engine (requires GPU + pip install vllm)\n"
+            "  vllm-server/<model>   vLLM OpenAI-compatible HTTP server\n"
+            "  hf/<model>            HuggingFace Transformers pipeline\n"
+            "Examples:\n"
+            "  --model vllm/mistralai/Mistral-7B-Instruct-v0.1\n"
+            "  --model vllm-server/meta-llama/Llama-2-7b-chat-hf\n"
+            "  --model hf/microsoft/phi-2\n"
+            "Overrides AGENT_MODEL env var."
+        ),
+    )
+    run_p.add_argument(
+        "--worker-model",
+        metavar="MODEL",
+        default=None,
+        help=(
+            "Worker agents model. Same prefix scheme as --model.\n"
+            "When omitted, workers use --model / WORKER_MODEL_NAME / AGENT_MODEL.\n"
+            "Examples:\n"
+            "  --worker-model hf/microsoft/phi-2\n"
+            "  --worker-model vllm/Qwen/Qwen-7B-Chat\n"
+            "Overrides WORKER_MODEL_NAME env var."
         ),
     )
     run_p.set_defaults(func=cmd_run)
