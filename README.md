@@ -257,7 +257,7 @@ ClawSwarm supports local models via **vLLM** (GPU) or **HuggingFace Transformers
 
 **vLLM (recommended for GPU):**
 
-e```bash
+```bash
 pip install claw-swarm[vllm]
 clawswarm run --model vllm/mistralai/Mistral-7B-Instruct-v0.1
 ```
