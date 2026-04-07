@@ -16,6 +16,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime
+import json
 import os
 import subprocess
 import sys
@@ -257,6 +259,285 @@ def cmd_settings(_args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_stats(args: argparse.Namespace) -> int:
+    """
+    Print aggregate statistics from the SQLite message log.
+
+    Reads the same database used during agent runtime (controlled by the
+    MESSAGE_LOG_DB env var).  Use --json to get machine-readable output.
+
+    Returns:
+        0 on success, 1 on error.
+    """
+    _ensure_dotenv()
+
+    try:
+        from claw_swarm.db import fetch_stats, init_db
+
+        init_db()
+        s = fetch_stats()
+    except Exception as exc:
+        _console.print(
+            f"[red]Failed to read database:[/red] {exc}",
+            highlight=False,
+        )
+        return 1
+
+    if s["total"] == 0:
+        _console.print("[yellow]No messages logged yet.[/yellow]")
+        return 0
+
+    if args.json:
+        _console.print(json.dumps(s, indent=2))
+        return 0
+
+    def _ms_to_date(ms: int) -> str:
+        if not ms:
+            return "—"
+        return datetime.datetime.fromtimestamp(
+            ms / 1000, tz=datetime.timezone.utc
+        ).strftime("%Y-%m-%d %H:%M UTC")
+
+    # ── Overview panel ───────────────────────────────────────────────
+    overview = Table(
+        box=box.ROUNDED,
+        border_style="cyan",
+        show_header=False,
+        padding=(0, 1),
+    )
+    overview.add_column(style="bold", justify="right")
+    overview.add_column(style="cyan")
+
+    overview.add_row("Total messages", str(s["total"]))
+    overview.add_row(
+        "Input / Output",
+        f"{s['inputs']} input  /  {s['outputs']} output",
+    )
+    overview.add_row(
+        "Avg input length",
+        f"{s['avg_input_len']} chars",
+    )
+    overview.add_row(
+        "Avg reply length",
+        f"{s['avg_output_len']} chars",
+    )
+    overview.add_row("First message", _ms_to_date(s["first_ms"]))
+    overview.add_row("Last message", _ms_to_date(s["last_ms"]))
+
+    _console.print()
+    _console.print(
+        Panel(
+            overview,
+            title="[bold cyan]Overview[/bold cyan]",
+            border_style="cyan",
+            padding=(0, 1),
+        )
+    )
+
+    # ── Platform breakdown ───────────────────────────────────────────
+    if s["platforms"]:
+        plat_table = Table(
+            box=box.ROUNDED,
+            border_style="cyan",
+            show_header=True,
+            padding=(0, 1),
+        )
+        plat_table.add_column(
+            "Platform", style="bold", justify="left"
+        )
+        plat_table.add_column(
+            "Messages", style="cyan", justify="right"
+        )
+        plat_table.add_column("Share", style="dim", justify="right")
+        total_inputs = s["inputs"] or 1
+        for platform, count in s["platforms"].items():
+            pct = f"{count / total_inputs * 100:.1f}%"
+            plat_table.add_row(platform, str(count), pct)
+
+        _console.print(
+            Panel(
+                plat_table,
+                title="[bold cyan]By Platform (inputs)[/bold cyan]",
+                border_style="cyan",
+                padding=(0, 1),
+            )
+        )
+
+    # ── Top channels ─────────────────────────────────────────────────
+    if s["top_channels"]:
+        chan_table = Table(
+            box=box.ROUNDED,
+            border_style="cyan",
+            show_header=True,
+            padding=(0, 1),
+        )
+        chan_table.add_column(
+            "Channel ID", style="bold", justify="left"
+        )
+        chan_table.add_column(
+            "Exchanges", style="cyan", justify="right"
+        )
+        for entry in s["top_channels"]:
+            chan_table.add_row(
+                entry["channel_id"], str(entry["exchanges"])
+            )
+
+        _console.print(
+            Panel(
+                chan_table,
+                title="[bold cyan]Top Channels[/bold cyan]",
+                border_style="cyan",
+                padding=(0, 1),
+            )
+        )
+
+    # ── Messages per day ─────────────────────────────────────────────
+    if s["per_day"]:
+        day_table = Table(
+            box=box.ROUNDED,
+            border_style="cyan",
+            show_header=True,
+            padding=(0, 1),
+        )
+        day_table.add_column(
+            "Date (UTC)", style="bold", justify="left"
+        )
+        day_table.add_column(
+            "Input messages", style="cyan", justify="right"
+        )
+        # Show the most recent 14 days only to keep output compact
+        recent_days = list(s["per_day"].items())[-14:]
+        for date, count in recent_days:
+            day_table.add_row(date, str(count))
+        title_suffix = (
+            " (last 14 days)" if len(s["per_day"]) > 14 else ""
+        )
+
+        _console.print(
+            Panel(
+                day_table,
+                title=f"[bold cyan]Messages per Day{title_suffix}"
+                "[/bold cyan]",
+                border_style="cyan",
+                padding=(0, 1),
+            )
+        )
+
+    _console.print()
+    return 0
+
+
+def cmd_logs(args: argparse.Namespace) -> int:
+    """
+    Dump all logged messages from the SQLite database to a file.
+
+    Writes every input/output row to *output* (default: message_logs.md
+    or message_logs.txt depending on --format).  Format is inferred from
+    the output file extension when --output is given; --format overrides.
+
+    Returns:
+        0 on success, 1 on error.
+    """
+    _ensure_dotenv()
+
+    # Determine format: explicit flag > file extension > default md
+    fmt = (args.format or "").lower()
+    output_path: str = args.output or ""
+    if not fmt:
+        if output_path.endswith(".txt"):
+            fmt = "txt"
+        else:
+            fmt = "md"
+    if not output_path:
+        output_path = (
+            "message_logs.md" if fmt == "md" else "message_logs.txt"
+        )
+
+    try:
+        from claw_swarm.db import fetch_recent, init_db
+
+        init_db()
+        rows = fetch_recent(limit=args.limit or 0)
+    except Exception as exc:
+        _console.print(
+            f"[red]Failed to read database:[/red] {exc}",
+            highlight=False,
+        )
+        return 1
+
+    if not rows:
+        _console.print("[yellow]No messages logged yet.[/yellow]")
+        return 0
+
+    lines: list[str] = []
+    if fmt == "md":
+        lines.append("# ClawSwarm Message Logs\n")
+        lines.append(f"_Exported {len(rows)} record(s)_\n")
+        lines.append(
+            "| # | Timestamp (ms) | Direction | Platform"
+            " | Channel | Thread | Sender | Message ID | Text |\n"
+        )
+        lines.append(
+            "|---|---------------|-----------|---------|"
+            "---------|--------|--------|------------|------|\n"
+        )
+        for i, row in enumerate(rows, 1):
+            text = (
+                (row["text"] or "")
+                .replace("|", "\\|")
+                .replace("\n", " ")
+            )
+            lines.append(
+                f"| {i} | {row['logged_at_ms']} "
+                f"| **{row['direction']}** "
+                f"| {row['platform'] or ''} "
+                f"| {row['channel_id'] or ''} "
+                f"| {row['thread_id'] or ''} "
+                f"| {row['sender_handle'] or row['sender_id'] or ''} "
+                f"| {row['message_id'] or ''} "
+                f"| {text} |\n"
+            )
+    else:  # txt
+        lines.append(
+            f"ClawSwarm Message Logs — {len(rows)} record(s)\n"
+        )
+        lines.append("=" * 72 + "\n")
+        for i, row in enumerate(rows, 1):
+            lines.append(f"[{i}] {row['logged_at_ms']} ms\n")
+            lines.append(f"  direction : {row['direction']}\n")
+            lines.append(f"  platform  : {row['platform'] or '—'}\n")
+            lines.append(
+                f"  channel   : {row['channel_id'] or '—'}\n"
+            )
+            lines.append(f"  thread    : {row['thread_id'] or '—'}\n")
+            lines.append(
+                f"  sender    : "
+                f"{row['sender_handle'] or row['sender_id'] or '—'}\n"
+            )
+            lines.append(
+                f"  msg_id    : {row['message_id'] or '—'}\n"
+            )
+            lines.append(
+                f"  text      : {(row['text'] or '').strip()}\n"
+            )
+            lines.append("-" * 72 + "\n")
+
+    try:
+        with open(output_path, "w", encoding="utf-8") as fh:
+            fh.writelines(lines)
+    except OSError as exc:
+        _console.print(
+            f"[red]Could not write {output_path}:[/red] {exc}",
+            highlight=False,
+        )
+        return 1
+
+    _console.print(
+        f"[green]Wrote {len(rows)} record(s) → {output_path}[/green]"
+    )
+    return 0
+
+
 def cmd_onboarding(args: argparse.Namespace) -> int:
     """
     Interactive onboarding wizard that creates ``claw_config.yaml``.
@@ -296,6 +577,10 @@ def main() -> int:
             "# custom API port\n"
             "  clawswarm settings               "
             "# show live config\n"
+            "  clawswarm logs                   "
+            "# dump message logs to file\n"
+            "  clawswarm stats                  "
+            "# show message statistics\n"
         ),
         epilog=(
             "Config file: claw_config.yaml  (run 'onboarding' to create)\n"
@@ -462,6 +747,86 @@ def main() -> int:
         help="Overwrite claw_config.yaml if it already exists",
     )
     on_p.set_defaults(func=cmd_onboarding)
+
+    # ── logs ─────────────────────────────────────────────────────────────
+    logs_p = subparsers.add_parser(
+        "logs",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        help="Dump all SQL message logs to a .md or .txt file",
+        description=(
+            "Export every logged input/output message from the\n"
+            "SQLite database to a Markdown or plain-text file.\n"
+            "\n"
+            "Examples:\n"
+            "  clawswarm logs                      "
+            "# → message_logs.md\n"
+            "  clawswarm logs --format txt         "
+            "# → message_logs.txt\n"
+            "  clawswarm logs --output chat.md     "
+            "# custom file name\n"
+            "  clawswarm logs --limit 500          "
+            "# most recent 500 rows\n"
+            "\n"
+            "Format is inferred from --output extension when given;\n"
+            "--format always takes precedence.\n"
+            "\n"
+            "Set MESSAGE_LOG_DB env var to the same path used when\n"
+            "the agent was running (default: in-memory, so start the\n"
+            "agent with MESSAGE_LOG_DB=messages.db to persist logs).\n"
+        ),
+    )
+    logs_p.add_argument(
+        "--output",
+        "-o",
+        metavar="FILE",
+        default=None,
+        help=(
+            "Output file path. "
+            "Defaults to message_logs.md or message_logs.txt."
+        ),
+    )
+    logs_p.add_argument(
+        "--format",
+        "-f",
+        choices=["md", "txt"],
+        default=None,
+        help="Output format: md (default) or txt.",
+    )
+    logs_p.add_argument(
+        "--limit",
+        "-n",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Max rows to export (0 = all, default).",
+    )
+    logs_p.set_defaults(func=cmd_logs)
+
+    # ── stats ─────────────────────────────────────────────────────────────
+    stats_p = subparsers.add_parser(
+        "stats",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        help="Show message statistics from the SQL log",
+        description=(
+            "Print aggregate statistics from the SQLite message log:\n"
+            "total messages, platform breakdown, top channels,\n"
+            "average lengths, and daily message counts.\n"
+            "\n"
+            "Examples:\n"
+            "  clawswarm stats\n"
+            "  clawswarm stats --json\n"
+            "\n"
+            "Set MESSAGE_LOG_DB to the same path used when the agent\n"
+            "was running (default: in-memory, lost on process exit).\n"
+        ),
+    )
+    stats_p.add_argument(
+        "--json",
+        action="store_true",
+        default=False,
+        help="Output raw JSON instead of Rich tables.",
+    )
+    stats_p.set_defaults(func=cmd_stats)
 
     args = parser.parse_args()
     if not args.command:

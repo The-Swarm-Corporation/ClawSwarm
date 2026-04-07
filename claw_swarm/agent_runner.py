@@ -14,7 +14,7 @@ import os
 import signal
 import sys
 from typing import Callable, Optional
-
+from rich import print as rich_print
 from claw_swarm.agent import create_agent, summarize_for_telegram
 from claw_swarm.gateway.proto import messaging_gateway_pb2 as pb
 from claw_swarm.agent.prompts import CLAWSWARM_SYSTEM
@@ -24,6 +24,7 @@ from claw_swarm.gateway.proto import (
 from claw_swarm.gateway.schema import UnifiedMessage
 from claw_swarm.agent.memory import append_interaction, read_memory
 from claw_swarm.replier import send_message_async
+from claw_swarm.db import init_db, log_input, log_output
 
 
 def _extract_final_reply(
@@ -106,6 +107,15 @@ async def _process_message(
     task = msg.text.strip() if msg.text else "(no text)"
     if not task:
         return
+    log_input(
+        text=task,
+        message_id=msg.id,
+        platform=msg.platform.name,
+        channel_id=msg.channel_id,
+        thread_id=msg.thread_id or "",
+        sender_id=msg.sender_id or "",
+        sender_handle=msg.sender_handle or "",
+    )
     # 1. System prompt first so the agent always has identity and instructions.
     # 2. Then memory (past conversations) so it doesn't override or confuse the system.
     # 3. Then the current message to answer.
@@ -138,6 +148,14 @@ async def _process_message(
             )
     except Exception as e:
         reply_text = f"Sorry, something went wrong: {e!s}"
+    log_output(
+        text=reply_text,
+        message_id=msg.id,
+        platform=msg.platform.name,
+        channel_id=msg.channel_id,
+        thread_id=msg.thread_id or "",
+        sender_handle=msg.sender_handle or "",
+    )
     # Persist this interaction to memory (project root markdown file)
     append_interaction(
         platform=msg.platform.name,
@@ -232,9 +250,9 @@ def main() -> int:
             # Windows
             break
 
-    print(
-        "ClawSwarm agent started. Polling gateway for messages (Ctrl+C to stop).",
-        file=sys.stderr,
+    init_db()
+    rich_print(
+        "\n\n[bold green]ClawSwarm agent started.[/bold green] Polling gateway for messages (Ctrl+C to stop).\n "
     )
     try:
         loop.run_until_complete(task)
