@@ -128,11 +128,11 @@ class TestCreateAgent:
             "claw_swarm.agent.main.HierarchicalSwarm"
         ) as mock_swarm:
             with patch.dict(
-                os.environ, {"AGENT_MODEL": "gpt-4o"}, clear=False
+                os.environ, {"AGENT_MODEL": "gpt-5.4"}, clear=False
             ):
                 agent_main.create_agent()
         call_kw = mock_swarm.call_args[1]
-        assert call_kw["director_model_name"] == "gpt-4o"
+        assert call_kw["director_model_name"] == "gpt-5.4"
 
     def test_model_default_when_env_empty(self):
         with patch(
@@ -143,4 +143,4 @@ class TestCreateAgent:
             ):
                 agent_main.create_agent()
         call_kw = mock_swarm.call_args[1]
-        assert call_kw["director_model_name"] == "gpt-4o-mini"
+        assert call_kw["director_model_name"] == "gpt-5.4"

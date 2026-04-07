@@ -157,7 +157,7 @@ On startup the server fetches the machine's public IP from three fallback URLs (
 1. Explicit argument to the factory function
 2. `WORKER_MODEL_NAME` environment variable
 3. `AGENT_MODEL` environment variable
-4. Hardcoded default (typically `"gpt-4o-mini"`)
+4. Hardcoded default (typically `"gpt-5.4"`)
 
 Every worker agent factory calls this when resolving its model. This means you can swap all worker agents to a different model at deploy time without touching source code — just set `WORKER_MODEL_NAME=gpt-4.1` in your environment.
 

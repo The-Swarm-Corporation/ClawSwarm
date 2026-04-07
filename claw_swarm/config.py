@@ -20,7 +20,7 @@ _DEFAULT_AGENT_NAME = "ClawSwarm"
 _DEFAULT_AGENT_DESCRIPTION = (
     "A hierarchical swarm of agents that can " "handle complex tasks"
 )
-_DEFAULT_WORKER_MODEL = "gpt-4o-mini"
+_DEFAULT_WORKER_MODEL = "gpt-5.4"
 _DEFAULT_GATEWAY_HOST = "[::]"
 _DEFAULT_GATEWAY_PORT = 50051
 _DEFAULT_GATEWAY_TLS = False

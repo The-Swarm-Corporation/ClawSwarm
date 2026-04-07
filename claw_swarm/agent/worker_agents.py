@@ -238,7 +238,7 @@ def create_response_agent(
     Args:
         agent_name: Name for the agent instance.
         system_prompt: Override the default response specialist prompt.
-        model_name: Model to use; defaults to WORKER_MODEL_NAME, or AGENT_MODEL, or "gpt-4o-mini".
+        model_name: Model to use; defaults to WORKER_MODEL_NAME, or AGENT_MODEL, or "gpt-5.4".
 
     Returns:
         Agent with no tools, for greetings and general Q&A.
@@ -249,7 +249,7 @@ def create_response_agent(
         description=RESPONSE_AGENT_DESCRIPTION,
         system_prompt=prompt,
     )
-    cloud_model, llm = resolve_llm(model_name, default="gpt-4o-mini")
+    cloud_model, llm = resolve_llm(model_name, default="gpt-5.4")
     return Agent(
         agent_name=agent_name,
         agent_description=RESPONSE_AGENT_DESCRIPTION,
@@ -275,7 +275,7 @@ def create_search_agent(
     Args:
         agent_name: Name for the agent instance.
         system_prompt: Override the default search specialist prompt.
-        model_name: Model to use; defaults to WORKER_MODEL_NAME, or AGENT_MODEL, or "gpt-4o-mini".
+        model_name: Model to use; defaults to WORKER_MODEL_NAME, or AGENT_MODEL, or "gpt-5.4".
 
     Returns:
         Agent configured with exa_search as its tool.
@@ -290,7 +290,7 @@ def create_search_agent(
         description=SEARCH_AGENT_DESCRIPTION,
         system_prompt=prompt,
     )
-    cloud_model, llm = resolve_llm(model_name, default="gpt-4o-mini")
+    cloud_model, llm = resolve_llm(model_name, default="gpt-5.4")
     return Agent(
         agent_name=agent_name,
         agent_description=SEARCH_AGENT_DESCRIPTION,
@@ -317,7 +317,7 @@ def create_token_launch_agent(
     Args:
         agent_name: Name for the agent instance.
         system_prompt: Override the default token launch prompt.
-        model_name: Model to use; defaults to WORKER_MODEL_NAME, or AGENT_MODEL, or "gpt-4o-mini".
+        model_name: Model to use; defaults to WORKER_MODEL_NAME, or AGENT_MODEL, or "gpt-5.4".
 
     Returns:
         Agent configured with launch_token and claim_fees as tools.
@@ -332,7 +332,7 @@ def create_token_launch_agent(
         description=TOKEN_LAUNCH_AGENT_DESCRIPTION,
         system_prompt=prompt,
     )
-    cloud_model, llm = resolve_llm(model_name, default="gpt-4o-mini")
+    cloud_model, llm = resolve_llm(model_name, default="gpt-5.4")
     return Agent(
         agent_name=agent_name,
         agent_description=TOKEN_LAUNCH_AGENT_DESCRIPTION,
@@ -360,7 +360,7 @@ def create_developer_agent(
     Args:
         agent_name: Name for the agent instance.
         system_prompt: Override the default developer specialist prompt.
-        model_name: Model to use; defaults to WORKER_MODEL_NAME, or AGENT_MODEL, or "gpt-4o-mini".
+        model_name: Model to use; defaults to WORKER_MODEL_NAME, or AGENT_MODEL, or "gpt-5.4".
 
     Returns:
         Agent configured with run_claude_developer (Claude Code) as its tool.
@@ -375,7 +375,7 @@ def create_developer_agent(
         description=DEVELOPER_AGENT_DESCRIPTION,
         system_prompt=prompt,
     )
-    cloud_model, llm = resolve_llm(model_name, default="gpt-4o-mini")
+    cloud_model, llm = resolve_llm(model_name, default="gpt-5.4")
     return Agent(
         agent_name=agent_name,
         agent_description=DEVELOPER_AGENT_DESCRIPTION,

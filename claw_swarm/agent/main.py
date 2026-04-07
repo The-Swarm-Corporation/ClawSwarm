@@ -27,7 +27,7 @@ def _build_worker_agents(worker_model: str | None = None) -> list:
 
     Args:
         worker_model: Optional model spec for workers. Supports cloud model
-            names (``"gpt-4o-mini"``), or local prefixes
+            names (``"gpt-5.4"``), or local prefixes
             (``"vllm/<model>"``, ``"hf/<model>"``).  When None the
             WORKER_MODEL_NAME / AGENT_MODEL env vars are used, then the
             built-in default.
@@ -101,7 +101,7 @@ def create_agent(
     Model selection (director and workers are configured independently):
 
     *Cloud models (default):*
-    Pass any OpenAI / Anthropic model name, e.g. ``"gpt-4o-mini"`` or set the
+    Pass any OpenAI / Anthropic model name, e.g. ``"gpt-5.4"`` or set the
     ``AGENT_MODEL`` / ``WORKER_MODEL_NAME`` environment variables.
 
     *Local models via vLLM:*
@@ -132,9 +132,9 @@ def create_agent(
         description:    Override the default swarm description.
         director_model: Model spec for the director agent. Supports cloud names
             or local prefixes (``vllm/``, ``vllm-server/``, ``hf/``).
-            Falls back to AGENT_MODEL env var, then ``"gpt-4o-mini"``.
+            Falls back to AGENT_MODEL env var, then ``"gpt-5.4"``.
         worker_model:   Model spec for worker agents. Falls back to
-            WORKER_MODEL_NAME env var, AGENT_MODEL, then ``"gpt-4o-mini"``.
+            WORKER_MODEL_NAME env var, AGENT_MODEL, then ``"gpt-5.4"``.
 
     Returns:
         HierarchicalSwarm: Swarm ready for `.run(task)` calls.
@@ -159,9 +159,9 @@ def create_agent(
     director_spec = (
         director_model
         or os.environ.get("AGENT_MODEL", "").strip()
-        or "gpt-4o-mini"
+        or "gpt-5.4"
     )
-    cloud_model, llm_obj = resolve_llm(director_spec, default="gpt-4o-mini")
+    cloud_model, llm_obj = resolve_llm(director_spec, default="gpt-5.4")
 
     if llm_obj is not None:
         # Local model: build a director Agent with the custom llm wrapper and
