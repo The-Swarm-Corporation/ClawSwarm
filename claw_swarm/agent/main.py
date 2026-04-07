@@ -21,6 +21,7 @@ from claw_swarm.agent.worker_agents import (
     create_token_launch_agent,
 )
 
+
 def _build_worker_agents(worker_model: str | None = None) -> list:
     """
     Create the four ClawSwarm worker agents.
@@ -161,7 +162,9 @@ def create_agent(
         or os.environ.get("AGENT_MODEL", "").strip()
         or "gpt-5.4"
     )
-    cloud_model, llm_obj = resolve_llm(director_spec, default="gpt-5.4")
+    cloud_model, llm_obj = resolve_llm(
+        director_spec, default="gpt-5.4"
+    )
 
     if llm_obj is not None:
         # Local model: build a director Agent with the custom llm wrapper and

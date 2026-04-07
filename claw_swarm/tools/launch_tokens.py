@@ -193,15 +193,6 @@ def launch_token(
     url = f"{DEFAULT_BASE_URL}/api/token/launch"
     timeout = 60.0
 
-    # Masked key diagnostic — confirms the right value is loaded.
-    # Logged at INFO (not DEBUG) so it appears regardless of log-level config.
-    _key_preview = key[:6] + "..." if len(key) > 6 else "***"
-    logger.info(
-        "launch_token: SWARMS_API_KEY prefix={!r} len={} "
-        "(wrong prefix? check .env for extra quotes or name typos)",
-        _key_preview,
-        len(key),
-    )
     logger.info(
         "launch_token: POST {} | name={!r} ticker={!r} multipart={}",
         url,

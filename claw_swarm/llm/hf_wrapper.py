@@ -68,7 +68,10 @@ class HuggingFaceWrapper:
         if _device == "auto":
             if torch.cuda.is_available():
                 _device = "cuda"
-            elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            elif (
+                hasattr(torch.backends, "mps")
+                and torch.backends.mps.is_available()
+            ):
                 _device = "mps"
             else:
                 _device = "cpu"
@@ -81,7 +84,9 @@ class HuggingFaceWrapper:
         }
         _torch_dtype = _dtype_map.get(torch_dtype, "auto")
 
-        print(f"[ClawSwarm] Loading HuggingFace model: {model_name} on {_device}")
+        print(
+            f"[ClawSwarm] Loading HuggingFace model: {model_name} on {_device}"
+        )
         self._pipe = pipeline(
             "text-generation",
             model=model_name,
@@ -114,8 +119,14 @@ class HuggingFaceWrapper:
         Returns:
             Generated text as a plain string (input prompt stripped).
         """
-        _temp = temperature if temperature is not None else self.temperature
-        _max = max_tokens if max_tokens is not None else self.max_tokens
+        _temp = (
+            temperature
+            if temperature is not None
+            else self.temperature
+        )
+        _max = (
+            max_tokens if max_tokens is not None else self.max_tokens
+        )
 
         gen_kwargs: dict = {
             "max_new_tokens": _max,

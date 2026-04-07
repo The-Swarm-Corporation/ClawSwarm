@@ -198,7 +198,17 @@ async def run_agent_loop(
         agent = create_agent()
     target = gateway_target or _get_gateway_target()
 
-    channel = grpc.aio.insecure_channel(target)
+    _tls = os.environ.get("GATEWAY_TLS", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    if _tls:
+        channel = grpc.aio.secure_channel(
+            target, grpc.ssl_channel_credentials()
+        )
+    else:
+        channel = grpc.aio.insecure_channel(target)
     stub = pb_grpc.MessagingGatewayStub(channel)
     since_ms = 0
 
