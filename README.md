@@ -30,7 +30,7 @@
 </p>
 
 
-**A smaller, lighter-weight version of [OpenClaw](https://github.com/openclaw/openclaw)**—natively multi-agent, compiles to Rust, and built on the **[Swarms](https://github.com/kyegomez/swarms) framework** and Swarms ecosystem. One API, unified messaging across Telegram, Discord, and WhatsApp with optional Claude-powered reasoning. Production-ready: gRPC gateway, prompts in code (`claw_swarm.prompts`), and 24/7 operation. Dockerfile included (Python 3.12).
+**ClawSwarm** is a lightweight, multi-agent messaging framework built on Swarms, offering unified Telegram, Discord, and WhatsApp support, with Rust compilation, gRPC API, and production-ready features.
 
 
 ---
@@ -61,21 +61,21 @@ Set these in your shell or in a `.env` file (e.g. `--env-file .env` with Docker)
 | **Gateway** | | |
 | `GATEWAY_HOST` | Bind address (gateway) or gateway host (agent) | `[::]` (server), `localhost` (agent) |
 | `GATEWAY_PORT` | gRPC port | `50051` |
-| `GATEWAY_TLS` | Enable TLS: `1`, `true`, or `yes` | — |
-| `GATEWAY_TLS_CERT_FILE` | Path to TLS certificate file | — |
-| `GATEWAY_TLS_KEY_FILE` | Path to TLS private key file | — |
+| `GATEWAY_TLS` | Enable TLS: `1`, `true`, or `yes` | - |
+| `GATEWAY_TLS_CERT_FILE` | Path to TLS certificate file | - |
+| `GATEWAY_TLS_KEY_FILE` | Path to TLS private key file | - |
 | **Channels** | | |
-| `TELEGRAM_BOT_TOKEN` | Telegram Bot API token | — |
-| `DISCORD_BOT_TOKEN` | Discord bot token | — |
-| `DISCORD_CHANNEL_IDS` | Comma-separated Discord channel IDs | — |
-| `WHATSAPP_ACCESS_TOKEN` | WhatsApp Cloud API access token | — |
-| `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp Cloud API phone number ID | — |
-| `WHATSAPP_QUEUE_PATH` | Optional WhatsApp queue path | — |
+| `TELEGRAM_BOT_TOKEN` | Telegram Bot API token | - |
+| `DISCORD_BOT_TOKEN` | Discord bot token | - |
+| `DISCORD_CHANNEL_IDS` | Comma-separated Discord channel IDs | - |
+| `WHATSAPP_ACCESS_TOKEN` | WhatsApp Cloud API access token | - |
+| `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp Cloud API phone number ID | - |
+| `WHATSAPP_QUEUE_PATH` | Optional WhatsApp queue path | - |
 | **Agent** | | |
 | `AGENT_MODEL` | Swarms director / default agent model | `gpt-4o-mini` |
-| `WORKER_MODEL_NAME` | Worker agents model (Response/Search/TokenLaunch/Developer). If set, overrides `AGENT_MODEL` for workers. | — (falls back to `AGENT_MODEL` then `gpt-4o-mini`) |
-| `OPENAI_API_KEY` | OpenAI API key (for agent model) | — |
-| `ANTHROPIC_API_KEY` | Anthropic API key (for Claude tool) | — |
+| `WORKER_MODEL_NAME` | Worker agents model (Response/Search/TokenLaunch/Developer). If set, overrides `AGENT_MODEL` for workers. | - (falls back to `AGENT_MODEL` then `gpt-4o-mini`) |
+| `OPENAI_API_KEY` | OpenAI API key (for agent model) | - |
+| `ANTHROPIC_API_KEY` | Anthropic API key (for Claude tool) | - |
 | **Memory** | | |
 | `AGENT_MEMORY_FILE` | Agent memory markdown filename (project root) | `agent_memory.md` |
 | `AGENT_MEMORY_MAX_CHARS` | Max characters of memory to load into context | `100000` |
@@ -91,7 +91,7 @@ Set these in your shell or in a `.env` file (e.g. `--env-file .env` with Docker)
 pip install -U claw-swarm
 ```
 
-**2. Create your config** — run the interactive wizard to generate `claw_config.yaml`:
+**2. Create your config** - run the interactive wizard to generate `claw_config.yaml`:
 
 ```bash
 clawswarm onboarding
@@ -99,7 +99,7 @@ clawswarm onboarding
 
 Press **Enter** to accept defaults. This writes `claw_config.yaml` to your project root with gateway host/port/TLS, HTTP API port/key, agent name, worker model, and verbose mode.
 
-**3. Set secrets** — copy `.env.example` to `.env` and fill in your credentials:
+**3. Set secrets** - copy `.env.example` to `.env` and fill in your credentials:
 
 ```bash
 cp .env.example .env
@@ -117,25 +117,25 @@ clawswarm run --api    # + public REST API on the configured port
 
 ## Overview
 
-ClawSwarm is a streamlined, multi-agent alternative to OpenClaw. It delivers **natively multi-agent** AI that responds to users on Telegram, Discord, and WhatsApp through a centralized **Messaging Gateway**. The gateway normalizes incoming messages; the **ClawSwarm Agent** (Swarms framework, configurable system prompt, Claude as a tool) processes each message and replies via a **Replier** back to the originating channel. Built on the Swarms ecosystem for reliability, security, and minimal operational overhead—with a path to **compile to Rust** for performance and deployment flexibility.
+ClawSwarm is a streamlined, multi-agent alternative to OpenClaw. It delivers **natively multi-agent** AI that responds to users on Telegram, Discord, and WhatsApp through a centralized **Messaging Gateway**. The gateway normalizes incoming messages; the **ClawSwarm Agent** (Swarms framework, configurable system prompt, Claude as a tool) processes each message and replies via a **Replier** back to the originating channel. Built on the Swarms ecosystem for reliability, security, and minimal operational overhead-with a path to **compile to Rust** for performance and deployment flexibility.
 
 ---
 
 ## Features
 
-- **Multi-channel messaging** — One API for Telegram, Discord, and WhatsApp. The gateway normalizes messages; the agent replies back to the correct channel.
+- **Multi-channel messaging** - One API for Telegram, Discord, and WhatsApp. The gateway normalizes messages; the agent replies back to the correct channel.
 
-- **Hierarchical multi-agent architecture** — A **director** agent (ClawSwarm) receives each message, creates a plan, and delegates to specialist **worker** agents via structured orders (SwarmSpec). Workers handle response, search, token launch, or code; the director orchestrates and the **Telegram Summarizer** turns combined output into a concise, emoji-free reply for chat.
+- **Hierarchical multi-agent architecture** - A **director** agent (ClawSwarm) receives each message, creates a plan, and delegates to specialist **worker** agents via structured orders (SwarmSpec). Workers handle response, search, token launch, or code; the director orchestrates and the **Telegram Summarizer** turns combined output into a concise, emoji-free reply for chat.
 
-- **Specialist workers** — **ClawSwarm-Response** (greetings, short answers), **ClawSwarm-Search** (web/semantic search via Exa), **ClawSwarm-TokenLaunch** (launch tokens and claim fees on Swarms World/Solana), **ClawSwarm-Developer** (implementation and debugging via Claude Code). Each worker has a focused role and tools; the director chooses who does what.
+- **Specialist workers** - **ClawSwarm-Response** (greetings, short answers), **ClawSwarm-Search** (web/semantic search via Exa), **ClawSwarm-TokenLaunch** (launch tokens and claim fees on Swarms World/Solana), **ClawSwarm-Developer** (implementation and debugging via Claude Code). Each worker has a focused role and tools; the director chooses who does what.
 
-- **Claude as a tool** — Deep reasoning and code are handled by Claude (e.g. via the Developer worker’s `run_claude_developer`). Configurable system prompts in `claw_swarm.prompts`; override with `create_agent(system_prompt=...)`.
+- **Claude as a tool** - Deep reasoning and code are handled by Claude (e.g. via the Developer worker’s `run_claude_developer`). Configurable system prompts in `claw_swarm.prompts`; override with `create_agent(system_prompt=...)`.
 
-- **Unified gRPC gateway** — Single ingest API for all channels; add or remove platforms without changing agent logic. Optional TLS, health checks, and normalized `UnifiedMessage` schema.
+- **Unified gRPC gateway** - Single ingest API for all channels; add or remove platforms without changing agent logic. Optional TLS, health checks, and normalized `UnifiedMessage` schema.
 
-- **Lighter than OpenClaw** — Smaller footprint and simpler stack; same multi-channel, multi-agent vision without the full OpenClaw surface area. Path to compile to Rust for performance and deployment flexibility.
+- **Lighter than OpenClaw** - Smaller footprint and simpler stack; same multi-channel, multi-agent vision without the full OpenClaw surface area. Path to compile to Rust for performance and deployment flexibility.
 
-- **Production-ready** — Environment-based configuration, long-running agent loop, Dockerfile, and 24/7 operation under systemd or managed runtimes.
+- **Production-ready** - Environment-based configuration, long-running agent loop, Dockerfile, and 24/7 operation under systemd or managed runtimes.
 
 ---
 
@@ -169,7 +169,7 @@ Each message is routed into a hierarchical multi-agent system: a director agent 
 
 ### Hierarchical architecture
 
-The core of ClawSwarm is a **hierarchical multi-agent system** built on Swarms’ `HierarchicalSwarm`. A single **director** agent sits at the top: it receives every user message, decides what to do, and delegates to one or more **worker** agents by emitting structured **SwarmSpec** orders (plan + task assignments). Workers are specialists with narrow roles and tools; they run their tasks and return results. The director does not execute tools itself—it only plans and delegates. After the swarm finishes, a dedicated **Telegram Summarizer** agent condenses the raw output into a short, plain-text reply suitable for chat (no emojis).
+The core of ClawSwarm is a **hierarchical multi-agent system** built on Swarms’ `HierarchicalSwarm`. A single **director** agent sits at the top: it receives every user message, decides what to do, and delegates to one or more **worker** agents by emitting structured **SwarmSpec** orders (plan + task assignments). Workers are specialists with narrow roles and tools; they run their tasks and return results. The director does not execute tools itself-it only plans and delegates. After the swarm finishes, a dedicated **Telegram Summarizer** agent condenses the raw output into a short, plain-text reply suitable for chat (no emojis).
 
 This design keeps the director focused on orchestration and intent, while search, code, token operations, and simple replies are handled by the right worker. You get multi-agent behavior with a clear chain of responsibility and a single, chat-friendly response to the user.
 
@@ -204,7 +204,7 @@ flowchart TB
 |-------|------|----------------------|
 | **ClawSwarm** (Director) | Orchestrator; creates a plan and assigns tasks to workers via SwarmSpec. Does not run tools itself. | Plan + orders (structured output for the swarm). |
 | **ClawSwarm-Response** | Simple replies and general questions; greetings, short factual answers, clarifications. | None (LLM only). |
-| **ClawSwarm-Search** | Web and semantic search. | `exa_search` — current events, research, fact-checking. |
+| **ClawSwarm-Search** | Web and semantic search. | `exa_search` - current events, research, fact-checking. |
 | **ClawSwarm-TokenLaunch** | Launch tokens and claim fees on Swarms World (Solana). | `launch_token`, `claim_fees`. |
 | **ClawSwarm-Developer** | Code, refactor, debug, and implement via Claude Code. | `run_claude_developer` (Read, Write, Edit, Bash, Grep, Glob, etc.). |
 | **ClawSwarm-TelegramSummarizer** | Summarize swarm output for chat; plain text, no emojis. | None (LLM only). |
@@ -237,7 +237,7 @@ flowchart LR
 | Feature | ClawSwarm | OpenClaw |
 |---------|-----------|----------|
 | **Transport** | gRPC over HTTP/2, Protobuf, optional TLS | WebSockets |
-| **Multi-agent** | Native — hierarchical director + workers | Single agent |
+| **Multi-agent** | Native - hierarchical director + workers | Single agent |
 | **Customizable agents** | Add workers with any tools, model, and role | Not natively extensible |
 | **Skills compatibility** | Backwards compatible with all Swarms skills | Custom skill format |
 | **Agent memory** | Persistent markdown memory + RAG for long history | Session-scoped |
@@ -262,7 +262,7 @@ pip install claw-swarm[vllm]
 clawswarm run --model vllm/mistralai/Mistral-7B-Instruct-v0.1
 ```
 
-**vLLM server** — start the server separately, then point ClawSwarm at it:
+**vLLM server** - start the server separately, then point ClawSwarm at it:
 
 ```bash
 python -m vllm.entrypoints.openai.api_server \
@@ -299,7 +299,7 @@ Supported prefixes: `vllm/<model>`, `vllm-server/<model>`, `hf/<model>`. Any spe
 
 ## Docs
 
-- [Configuration & CLI Reference](docs/cli_config.md) — `claw_config.yaml` schema, config precedence, all CLI flags, production examples, and troubleshooting
+- [Configuration & CLI Reference](docs/cli_config.md) - `claw_config.yaml` schema, config precedence, all CLI flags, production examples, and troubleshooting
 
 
 ---
@@ -308,9 +308,9 @@ Supported prefixes: `vllm/<model>`, `vllm-server/<model>`, `hf/<model>`. Any spe
 
 gRPC service:
 
-- **PollMessages** — Fetch messages since a timestamp (used by the agent runner).
-- **StreamMessages** — Server-streaming delivery of new messages.
-- **Health** — Liveness and version.
+- **PollMessages** - Fetch messages since a timestamp (used by the agent runner).
+- **StreamMessages** - Server-streaming delivery of new messages.
+- **Health** - Liveness and version.
 
 Messages are normalized to a single schema: `UnifiedMessage` (id, platform, channel_id, thread_id, sender, text, attachments, timestamp). Use TLS and restrict network access in production.
 
@@ -320,7 +320,7 @@ Messages are normalized to a single schema: `UnifiedMessage` (id, platform, chan
 
 ### Railway (Recommended)
 
-[Railway](https://railway.app) is the easiest way to deploy ClawSwarm. It handles containers, environment variables, persistent storage, and auto-restarts out of the box — no infrastructure management required.
+[Railway](https://railway.app) is the easiest way to deploy ClawSwarm. It handles containers, environment variables, persistent storage, and auto-restarts out of the box - no infrastructure management required.
 
 **Steps:**
 
@@ -342,7 +342,7 @@ Messages are normalized to a single schema: `UnifiedMessage` (id, platform, chan
 
 4. **Deploy.** Railway auto-detects the `Dockerfile` and builds the image. The service starts with `clawswarm run`.
 
-5. **(Optional) Expose the gRPC port** — In Railway's *Settings → Networking*, expose port `50051` if you need external clients to reach the gateway. For most setups the gateway and agent run in the same process and no public port is needed.
+5. **(Optional) Expose the gRPC port** - In Railway's *Settings → Networking*, expose port `50051` if you need external clients to reach the gateway. For most setups the gateway and agent run in the same process and no public port is needed.
 
 **Tips:**
 - Use Railway's *Volumes* to persist `agent_memory.md` across deploys (mount at `/app/agent_memory.md`).
@@ -368,9 +368,9 @@ docker run --env-file .env -v $(pwd)/agent_memory.md:/app/agent_memory.md clawsw
 
 ## Security and Operations
 
-- **Secrets** — Do not commit tokens or API keys. Use environment variables or a secrets manager.
-- **Transport** — Enable gateway TLS in production (`GATEWAY_TLS=1` and valid certificate and key).
-- **Access control** — Restrict which clients can reach the gRPC port (firewall, VPC, or mTLS as required).
+- **Secrets** - Do not commit tokens or API keys. Use environment variables or a secrets manager.
+- **Transport** - Enable gateway TLS in production (`GATEWAY_TLS=1` and valid certificate and key).
+- **Access control** - Restrict which clients can reach the gRPC port (firewall, VPC, or mTLS as required).
 
 ---
 
