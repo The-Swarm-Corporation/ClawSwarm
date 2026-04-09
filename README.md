@@ -30,7 +30,7 @@
 </p>
 
 
-**ClawSwarm** is a lightweight, multi-agent messaging framework built on Swarms, offering unified Telegram, Discord, and WhatsApp support, with Rust compilation, gRPC API, and production-ready features.
+**ClawSwarm** is a multi-agent personal productivity operating system powered by hundreds of agents designed to enhance your productivity.
 
 
 ---
@@ -123,19 +123,15 @@ ClawSwarm is a streamlined, multi-agent alternative to OpenClaw. It delivers **n
 
 ## Features
 
-- **Multi-channel messaging** - One API for Telegram, Discord, and WhatsApp. The gateway normalizes messages; the agent replies back to the correct channel.
-
-- **Hierarchical multi-agent architecture** - A **director** agent (ClawSwarm) receives each message, creates a plan, and delegates to specialist **worker** agents via structured orders (SwarmSpec). Workers handle response, search, token launch, or code; the director orchestrates and the **Telegram Summarizer** turns combined output into a concise, emoji-free reply for chat.
-
-- **Specialist workers** - **ClawSwarm-Response** (greetings, short answers), **ClawSwarm-Search** (web/semantic search via Exa), **ClawSwarm-TokenLaunch** (launch tokens and claim fees on Swarms World/Solana), **ClawSwarm-Developer** (implementation and debugging via Claude Code). Each worker has a focused role and tools; the director chooses who does what.
-
-- **Claude as a tool** - Deep reasoning and code are handled by Claude (e.g. via the Developer worker’s `run_claude_developer`). Configurable system prompts in `claw_swarm.prompts`; override with `create_agent(system_prompt=...)`.
-
-- **Unified gRPC gateway** - Single ingest API for all channels; add or remove platforms without changing agent logic. Optional TLS, health checks, and normalized `UnifiedMessage` schema.
-
-- **Lighter than OpenClaw** - Smaller footprint and simpler stack; same multi-channel, multi-agent vision without the full OpenClaw surface area. Path to compile to Rust for performance and deployment flexibility.
-
-- **Production-ready** - Environment-based configuration, long-running agent loop, Dockerfile, and 24/7 operation under systemd or managed runtimes.
+| Feature                          | Description |
+|-----------------------------------|-------------|
+| **Multi-channel messaging**       | One API for Telegram, Discord, and WhatsApp. The gateway normalizes messages; the agent replies back to the correct channel. |
+| **Hierarchical multi-agent architecture** | A **director** agent (ClawSwarm) receives each message, creates a plan, and delegates to specialist **worker** agents via structured orders (SwarmSpec). Workers handle response, search, token launch, or code; the director orchestrates and the **Telegram Summarizer** turns combined output into a concise, emoji-free reply for chat. |
+| **Specialist workers**            | **ClawSwarm-Response** (greetings, short answers), **ClawSwarm-Search** (web/semantic search via Exa), **ClawSwarm-TokenLaunch** (launch tokens and claim fees on Swarms World/Solana), **ClawSwarm-Developer** (implementation and debugging via Claude Code). Each worker has a focused role and tools; the director chooses who does what. |
+| **Claude as a tool**              | Deep reasoning and code are handled by Claude (e.g. via the Developer worker’s `run_claude_developer`). Configurable system prompts in `claw_swarm.prompts`; override with `create_agent(system_prompt=...)`. |
+| **Unified gRPC gateway**          | Single ingest API for all channels; add or remove platforms without changing agent logic. Optional TLS, health checks, and normalized `UnifiedMessage` schema. |
+| **Lighter than OpenClaw**         | Smaller footprint and simpler stack; same multi-channel, multi-agent vision without the full OpenClaw surface area. Path to compile to Rust for performance and deployment flexibility. |
+| **Production-ready**              | Environment-based configuration, long-running agent loop, Dockerfile, and 24/7 operation under systemd or managed runtimes. |
 
 ---
 
