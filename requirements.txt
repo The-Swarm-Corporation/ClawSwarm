@@ -8,3 +8,5 @@ aiohttp
 swarms
 loguru
 rich
+httpx
+swarms_tools
