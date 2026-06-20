@@ -60,6 +60,7 @@ uvicorn = {extras = ["standard"], version = "*"}
 vllm = {version = "*", optional = true}
 transformers = {version = "*", optional = true}
 accelerate = {version = "*", optional = true}
+swarms_tools = "*"
 
 [tool.poetry.extras]
 vllm = ["vllm"]
